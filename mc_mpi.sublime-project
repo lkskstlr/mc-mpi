@@ -1,0 +1,35 @@
+{
+	"folders":
+	[
+		{
+			"path": "."
+		}
+	],
+    "build_systems":
+    [
+        {
+            "name": "make",
+            "shell_cmd": "cd $project_path; cd build; make; cd ..;",
+        },
+        {
+            "name": "cmake",
+            "shell_cmd": "cd $project_path; rm -rf build; mkdir build; cd build; cmake ..; make; cd ..;",
+        },
+        {
+            "name": "cmake Release",
+            "shell_cmd": "cd $project_path; rm -rf release; mkdir release; cd release; cmake .. -DCMAKE_BUILD_TYPE=Release; make; cd ..;",
+        },
+        {
+            "name": "cmake Debug",
+            "shell_cmd": "cd $project_path; rm -rf debug; mkdir debug; cd debug; cmake .. -DCMAKE_BUILD_TYPE=Debug; make; cd ..;",
+        },
+    ],
+    "settings": {
+        "ClangFormat": {
+            "format_on_save": true,
+            "BasedOnStyle": "LLVM",
+            "IndentWidth": 2,
+            "ColumnLimit": 100
+        }
+    },
+}
