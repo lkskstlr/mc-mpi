@@ -68,6 +68,14 @@ int main(int argc, char **argv) {
     auto finish = my_clock::now();
     size_t n_sent_left, n_sent_right;
 
+    std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(100));
+    // if (layer.particles.size() > 0) {
+    //   printf("Process [%d/%d]: mus = (", world_rank, world_size - 1);
+    //   for (auto const &part : layer.particles) {
+    //     cout << part.mu << ", ";
+    //   }
+    //   cout << ")" << endl;
+    // }
     while (true) {
       start = my_clock::now();
       // simulate

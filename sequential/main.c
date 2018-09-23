@@ -95,6 +95,12 @@ int main(int argc, char **argv) {
   gettimeofday(&t1, NULL);
 
   while (nb_partics_enbl > 0) {
+
+    for (int i = 0; i < nb_partics; ++i) {
+      printf("%d, ", p_nc[i]);
+    }
+    printf("\n");
+
     dist_sortie_couche(&domaine, &ens_partic, p_enable, p_x, p_mu, p_nc, p_di,
                        p_ev);
 
