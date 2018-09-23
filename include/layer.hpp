@@ -11,6 +11,9 @@ public:
   void create_particles(UnifDist &dist, real_t x_ini, real_t wmc,
                         std::size_t n);
   int particle_step(UnifDist &dist, Particle &particle);
+  void simulate(UnifDist &dist, std::size_t nb_steps,
+                std::vector<Particle> &particles_left,
+                std::vector<Particle> &particles_right);
 
   // -- Data --
   const real_t x_min, x_max;

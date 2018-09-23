@@ -32,6 +32,9 @@ ParticleComm::ParticleComm(int world_size, int world_rank,
 
 void ParticleComm::send_particles(std::vector<Particle> const &particles,
                                   int rel_dest) {
+  if (particles.empty()) {
+    return;
+  }
   int dest = world_rank + rel_dest;
   assert((dest >= 0) && (dest < world_size));
 

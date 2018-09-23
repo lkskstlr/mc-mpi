@@ -87,44 +87,38 @@ int Layer::particle_step(UnifDist &dist, Particle &particle) {
   return index_new;
 }
 
-void Layer::simulate(UnifDist &dist, std::size_t nb_steps,
+bool Layer::simulate(UnifDist &dist, std::size_t nb_steps,
                      std::vector<Particle> &particles_left,
                      std::vector<Particle> &particles_right) {
   if (particles.empty()) {
-    return;
+    return false;
   }
-
-  std::size_t max_particles = std::max(particles.size(), nb_steps);
-  particles_left.reserve(particles_left.size() + max_particles / 2);
-  particles_right.reserve(particles_right.size() + max_particles / 2);
-
   int index_new;
-  Particle particle;
+  Particle &particle = particles.back();
 
-  std::size_t n_inside = 0;
-  std::size_t n_outside = 0;
-
-  for (std::size_t i = 0; i < nb_steps && !particles.empty(); ++i) {
-    particle = particles.back();
+  for (std::size_t i = 0; i < nb_steps; ++i) {
     index_new = particle_step(dist, particle);
 
     switch (index_new) {
     case 0:
-      n_inside++;
       break;
     case 1:
-      n_outside++;
       particles_right.push_back(particle);
       particles.pop_back();
+      if (particles.empty()) {
+        return true;
+      }
+      particle = particles.back();
       break;
     case -1:
-      n_outside++;
       particles_left.push_back(particle);
       particles.pop_back();
+      if (particles.empty()) {
+        return true;
+      }
+      particle = particles.back();
       break;
     }
   }
-  printf(" [in/total = %f] ", (1.0 * n_inside) / (n_inside + n_outside));
-  particles_left.shrink_to_fit();
-  particles_right.shrink_to_fit();
+  return true;
 }
