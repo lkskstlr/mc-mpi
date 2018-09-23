@@ -13,15 +13,7 @@
         },
         {
             "name": "cmake",
-            "shell_cmd": "cd $project_path; rm -rf build; mkdir build; cd build; cmake ..; make; cd ..;",
-        },
-        {
-            "name": "cmake Release",
-            "shell_cmd": "cd $project_path; rm -rf release; mkdir release; cd release; cmake .. -DCMAKE_BUILD_TYPE=Release; make; cd ..;",
-        },
-        {
-            "name": "cmake Debug",
-            "shell_cmd": "cd $project_path; rm -rf debug; mkdir debug; cd debug; cmake .. -DCMAKE_BUILD_TYPE=Debug; make; cd ..;",
+            "shell_cmd": "export CXX=mpicxx; cd $project_path; rm -rf build; mkdir build; cd build; cmake ..; make; cd ..;",
         },
     ],
     "settings": {

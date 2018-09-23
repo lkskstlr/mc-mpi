@@ -5,6 +5,20 @@
 #define VECTOR_RESERVE 10000
 #endif
 
+Layer decompose_domain(UnifDist &dist, real_t x_min, real_t x_max, real_t x_ini,
+                       int world_size, int world_rank,
+                       std::size_t nb_particles) {
+  assert(x_max > x_min);
+  real_t dx = (x_max - x_min) / world_size;
+  int nc_ini = (int)((x_ini - x_min) / dx);
+  Layer layer(x_min + world_rank * dx, x_min + (1 + world_rank) * dx);
+  if (world_rank == nc_ini) {
+    layer.create_particles(dist, x_ini, nb_particles);
+  }
+
+  return layer;
+}
+
 Layer::Layer(real_t x_min, real_t x_max)
     : x_min(x_min), x_max(x_max), sig(std::exp(-0.5 * (x_min + x_max))),
       sig_i(sig * interaction_rate), sig_a(sig * absorption_rate) {

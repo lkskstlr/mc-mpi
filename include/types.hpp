@@ -10,7 +10,6 @@
 #ifdef MC_SIMPLE_PRECIS
 
 typedef float real_t;
-// #define MAXREAL MAXFLOAT
 constexpr real_t MAXREAL = std::numeric_limits<real_t>::max();
 #define EPS_PRECISION 1e-4F
 

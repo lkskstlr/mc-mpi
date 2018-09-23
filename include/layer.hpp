@@ -29,4 +29,7 @@ public:
   const real_t sig_a; // = sig * absorption_rate
 };
 
+Layer decompose_domain(UnifDist &dist, real_t x_min, real_t x_max, real_t x_ini,
+                       int world_size, int world_rank,
+                       std::size_t nb_particles);
 #endif
