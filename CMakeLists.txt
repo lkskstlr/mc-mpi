@@ -24,12 +24,11 @@ endif()
 if(DEFINED ENV{CXX})
     message(STATUS "${Yellow}CXX=" $ENV{CXX} ". Make sure to use an MPI compatible compiler${ColourReset}. On unix system through e.g. 'export CXX=mpicxx'.")
 else(DEFINED ENV{CXX})
-    message(FATAL_ERROR "Please define the environment variable for the mpi capable cxx compiler. On unix system through e.g. 'export CXX=mpicxx'")
+    message(FATAL_ERROR "Please define the environment variable for the mpi capable cxx compiler. On unix system through e.g. 'export CXX=mpicxx'.")
 endif(DEFINED ENV{CXX})
 
 add_library(libmc-mpi SHARED
     src/random.cpp
-    src/particle.cpp
     src/layer.cpp
     src/particle_comm.cpp
 )

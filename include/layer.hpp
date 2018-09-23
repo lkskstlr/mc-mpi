@@ -1,7 +1,6 @@
 #ifndef GEOMETRY_HPP
 #define GEOMETRY_HPP
 
-#include "particle.hpp"
 #include "random.hpp"
 #include "types.hpp"
 #include <vector>
@@ -9,7 +8,8 @@
 class Layer {
 public:
   Layer(real_t x_min, real_t x_max);
-  void create_particles(UnifDist &dist, real_t x_ini, std::size_t n);
+  void create_particles(UnifDist &dist, real_t x_ini, real_t wmc,
+                        std::size_t n);
   int particle_step(UnifDist &dist, Particle &particle);
 
   // -- Data --

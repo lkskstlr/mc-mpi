@@ -19,4 +19,12 @@ constexpr real_t MAXREAL = std::numeric_limits<real_t>::max();
 #error "MC_DOUBLE_PRECISION NOT IMPLEMENTED"
 #endif
 
+/* Is POD to be easily send over MPI */
+typedef struct particle_tag {
+public:
+  real_t x;
+  real_t mu;
+  real_t wmc;
+} Particle;
+
 #endif

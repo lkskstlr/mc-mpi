@@ -1,7 +1,6 @@
 #ifndef PARTICLE_COMM_HPP
 #define PARTICLE_COMM_HPP
 
-#include "particle.hpp"
 #include "types.hpp"
 #include <mpi.h>
 #include <vector>

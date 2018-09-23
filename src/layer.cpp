@@ -13,7 +13,7 @@ Layer decompose_domain(UnifDist &dist, real_t x_min, real_t x_max, real_t x_ini,
   int nc_ini = (int)((x_ini - x_min) / dx);
   Layer layer(x_min + world_rank * dx, x_min + (1 + world_rank) * dx);
   if (world_rank == nc_ini) {
-    layer.create_particles(dist, x_ini, nb_particles);
+    layer.create_particles(dist, x_ini, 1.0 / nb_particles, nb_particles);
   }
 
   return layer;
@@ -25,11 +25,12 @@ Layer::Layer(real_t x_min, real_t x_max)
   particles.reserve(VECTOR_RESERVE);
 }
 
-void Layer::create_particles(UnifDist &dist, real_t x_ini, std::size_t n) {
+void Layer::create_particles(UnifDist &dist, real_t x_ini, real_t wmc,
+                             std::size_t n) {
   if (x_ini > x_min && x_ini < x_max) {
     Particle particle = Particle();
     particle.x = x_ini;
-    particle.wmc = 0.0;
+    particle.wmc = wmc;
 
     particles.reserve(n);
     for (std::size_t i = 0; i < n; ++i) {

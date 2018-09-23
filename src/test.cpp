@@ -44,7 +44,7 @@ int main(int argc, char const *argv[]) {
     cout << "Layer: n = "
          << ", x_min = " << layer.x_min << ", x_max = " << layer.x_max << endl;
     // cout << dist() << ", " << dist() << ", " << dist() << endl;
-    layer.create_particles(dist, 0.5, 100'000);
+    layer.create_particles(dist, 0.5, 0.0, 100'000);
 
     // cout << "Particles:" << endl;
     // for (auto const &particle : layer.particles) {
