@@ -7,6 +7,12 @@ add_library(libmc-mpi SHARED
     src/particle.cpp
     src/layer.cpp
 )
+target_include_directories(libmc-mpi PUBLIC include)
+set_target_properties(libmc-mpi PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED YES
+    CXX_EXTENSIONS NO
+)
 
 # Tests
 add_executable(test src/test.cpp)

@@ -1,4 +1,4 @@
-#include "geometry.hpp"
+#include "layer.hpp"
 #include "random.hpp"
 #include <iostream>
 
@@ -14,7 +14,7 @@ int main(int argc, char const *argv[]) {
   // Test Layer
   Layer layer(0.0, 1.0);
   cout << "sizeof(Particle) = " << sizeof(Particle) << endl;
-  cout << "Layer: n = " << layer.n << ", x_min = " << layer.x_min
+  cout << "Layer: n = " << ", x_min = " << layer.x_min
        << ", x_max = " << layer.x_max << endl;
   // cout << dist() << ", " << dist() << ", " << dist() << endl;
   layer.create_particles(dist, 0.5, 20);
