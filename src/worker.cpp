@@ -70,19 +70,21 @@ void Worker::spin() {
         // Send number particles to master (rank = 0)
         std::vector<int> nb_particles_disabled;
         nb_particles_disabled.push_back(particles_right.size());
+        printf("BLUBBBBB dis = %d\n", nb_particles_disabled.back());
         event_comm.send(nb_particles_disabled, 0, MCMPI_NB_DISABLED_TAG);
       }
 
       if (world_rank == 0) {
         // master
-        printf("Master: Simulation finished!\n");
         std::vector<int> nb_particles_disabled_right_vec;
-        if (event_comm.recv(nb_particles_disabled_right_vec, world_rank - 1,
-                            MCMPI_NB_DISABLED_TAG) &&
-            !nb_particles_disabled_right_vec.empty()) {
+        bool recv_dis =
+            event_comm.recv(nb_particles_disabled_right_vec,
+                            options.world_size - 1, MCMPI_NB_DISABLED_TAG);
+        printf("-----MASTER n = %ld\n", nb_particles_disabled_right_vec.size());
+        if (recv_dis && !nb_particles_disabled_right_vec.empty()) {
           size_t nb_disabled_right =
               static_cast<size_t>(nb_particles_disabled_right_vec[0]);
-
+          printf("=====MASTER nb_disabled_right = %ld\n", nb_disabled_right);
           if (particles_left.size() + nb_disabled_right ==
               options.nb_particles) {
             // end of simulation
@@ -91,6 +93,7 @@ void Worker::spin() {
               finished_vec.push_back(1);
               event_comm.send(finished_vec, i, MCMPI_FINISHED_TAG);
             }
+            printf("Master: Simulation finished!\n");
             flag = false;
           }
         }
@@ -98,7 +101,10 @@ void Worker::spin() {
 
       if (world_rank > 0) {
         std::vector<int> finished_vec;
-        if (event_comm.recv(finished_vec, 0, MCMPI_FINISHED_TAG)) {
+        bool did_receive = event_comm.recv(finished_vec, 0, MCMPI_FINISHED_TAG);
+        printf("[%03d/%03d]: n_recv_event = %ld\n", world_rank,
+               options.world_size, finished_vec.size());
+        if (did_receive) {
           // end of simulation
           printf("Process [%d,%d]: Simulation finished.\n", world_rank,
                  options.world_size);
@@ -111,6 +117,8 @@ void Worker::spin() {
     finish = high_resolution_clock::now();
     std::chrono::duration<double, std::milli> elapsed = finish - start;
 
+    printf("[%03d/%03d]: n = %08ld t = %fms\n", world_rank, options.world_size,
+           layer.particles.size(), elapsed.count());
     if (elapsed.count() < MC_MPI_WAIT_MS) {
       std::this_thread::sleep_for(
           std::chrono::duration<double, std::milli>(MC_MPI_WAIT_MS) - elapsed);

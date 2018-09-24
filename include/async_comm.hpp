@@ -1,6 +1,7 @@
 #ifndef ASYNC_COMM_HPP
 #define ASYNC_COMM_HPP
 
+#include "stdio.h"
 #include <mpi.h>
 #include <vector>
 
@@ -64,6 +65,15 @@ public:
     MPI_Issend(send_info.buf, data.size(), mpi_t, dest, tag, MPI_COMM_WORLD,
                &send_info.request);
 
+    // if (tag == 2) {
+    //   printf("----------ASYNC COMM SEND TAG = 2, dest = %d, n_buf = %ld\n",
+    //          dest, send_infos.size());
+    // }
+
+    if (tag == 1) {
+      printf("---JUHU-------ASYNC COMM SEND TAG = 1, dest = %d, n_buf = %ld\n",
+             dest, send_infos.size());
+    }
     send_infos.push_back(send_info);
   };
 
@@ -85,10 +95,18 @@ public:
     int nb_data = -1;
     do {
       MPI_Iprobe(source, tag, MPI_COMM_WORLD, &flag, &status);
+      if (source == 8) {
+        printf("TTTTTTAAAAAAAADDDDDDDDAAAAAAAAAAAAA source = %d, flag = %d\n",
+               source, flag);
+      }
       if (flag) {
+        if (tag == 1) {
+          printf("---JUHU-------ASYNC COMM RECV TAG = 1, source = %d\n",
+                 status.MPI_SOURCE);
+        }
         MPI_Get_count(&status, mpi_t, &nb_data);
         T *buf = (T *)malloc(sizeof(T) * nb_data);
-        MPI_Recv(buf, nb_data, mpi_t, source, tag, MPI_COMM_WORLD,
+        MPI_Recv(buf, nb_data, mpi_t, status.MPI_SOURCE, tag, MPI_COMM_WORLD,
                  MPI_STATUSES_IGNORE);
 
         data.reserve(data.size() + nb_data);
