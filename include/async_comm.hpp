@@ -17,19 +17,21 @@ template <typename T> class AsyncComm {
 
 public:
   /*!
-   * \function AsyncComm
+   * \function init
    *
-   * \brief Constructs an asyncchronous communicator. mpi_t has to be the mpi
-   * datatype for T, the template parameter of the class
+   * \brief Has to be called before usage! Initializes the asyncchronous
+   * communicator. mpi_t has to be the mpi datatype for T, the template
+   * parameter of the class
    *
    * \param[in] mpi_t the mpi datatype for T, the template parameter of the
    * class
    * \param[in] max_buffer_size maximum size of internal buffer in bytes
    */
-  AsyncComm(MPI_Datatype mpi_t, std::size_t max_buffer_size)
-      : mpi_t(mpi_t), max_buffer_size(max_buffer_size) {
+  void init(MPI_Datatype const mpi_t, std::size_t max_buffer_size) {
+    this->mpi_t = mpi_t;
+    this->max_buffer_size = max_buffer_size;
     send_infos.reserve(SEND_INFO_INITIAL_RESERVE);
-  };
+  }
 
   /*!
    * \function send
@@ -124,10 +126,10 @@ private:
   };
 
   std::size_t curr_buffer_size = 0;
-  const std::size_t max_buffer_size;
+  std::size_t max_buffer_size;
   std::size_t max_buffer_size_attained = 0;
 
-  const MPI_Datatype mpi_t;
+  MPI_Datatype mpi_t;
   std::vector<SendInfo> send_infos;
 };
 #endif
