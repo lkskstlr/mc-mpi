@@ -24,7 +24,7 @@ public:
   real_t weight_absorbed = 0;
 
   /* magic numbers. interaction = 1 - absorption */
-  static constexpr real_t absorption_rate = 0.000001;
+  static constexpr real_t absorption_rate = 0.5;
   static constexpr real_t interaction_rate = 1.0 - absorption_rate;
 
   /* derived quantities */

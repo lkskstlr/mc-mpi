@@ -34,7 +34,7 @@ void Layer::create_particles(UnifDist &dist, real_t x_ini, real_t wmc,
 
     particles.reserve(n);
     for (std::size_t i = 0; i < n; ++i) {
-      particle.mu = 0.01 * (2.0 * dist() - 1.0);
+      particle.mu = 2.0 * dist() - 1.0;
       particles.push_back(particle);
     }
   }
@@ -51,11 +51,9 @@ int Layer::particle_step(UnifDist &dist, Particle &particle) {
       index_new = -1;
       di_edge = (x_min - particle.x) / particle.mu;
       x_new_edge = x_min;
-      // printf(" (%f = %f/%f) ", di_edge, (x_min - particle.x), particle.mu);
     } else {
       index_new = 1;
       di_edge = (x_max - particle.x) / particle.mu;
-      // printf(" (%f = %f/%f) ", di_edge, (x_max - particle.x), particle.mu);
       x_new_edge = x_max;
     }
   }
@@ -74,7 +72,7 @@ int Layer::particle_step(UnifDist &dist, Particle &particle) {
     /* move inside cell an draw new mu */
     index_new = 0;
     particle.x += di * particle.mu;
-    particle.mu = 0.01 * (2.0 * dist() - 1.0);
+    particle.mu = 2.0 * dist() - 1.0;
   } else {
     /* set position to border */
     di = di_edge;
@@ -104,45 +102,22 @@ void Layer::simulate(UnifDist &dist, std::size_t nb_steps,
   particles_right.reserve(particles_right.size() + max_particles / 2);
 
   int index_new;
-  Particle &particle = particles.back();
-
-  std::size_t n_l = 0;
-  std::size_t n_m = 0;
-  std::size_t n_r = 0;
-  std::size_t n_mu_change = 0;
-  std::size_t n_mu_not_change = 0;
-
   for (std::size_t i = 0; i < nb_steps && !particles.empty(); ++i) {
-    particle = particles.back();
-    real_t mu_before = particle.mu;
-    index_new = particle_step(dist, particle);
-    if (index_new == 0) {
-      printf(" [[%f,%f]] ", mu_before, particle.mu);
+    index_new = particle_step(dist, particles.back());
 
-      // if (sgn(mu_before) == sgn(particle.mu)) {
-      //   n_mu_not_change++;
-      // } else {
-      //   n_mu_change++;
-      // }
-    }
     switch (index_new) {
     case 0:
-      n_m++;
       break;
     case 1:
-      n_r++;
-      particles_right.push_back(particle);
+      particles_right.push_back(particles.back());
       particles.pop_back();
       break;
     case -1:
-      n_l++;
-      particles_left.push_back(particle);
+      particles_left.push_back(particles.back());
       particles.pop_back();
       break;
     }
   }
-  // printf(" [l,m,r = %ld,%ld,%ld, .. c,nc = %ld, %ld] ", n_l, n_m, n_r,
-  // n_mu_change, n_mu_not_change);
   particles_left.shrink_to_fit();
   particles_right.shrink_to_fit();
 }

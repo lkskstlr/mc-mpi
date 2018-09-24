@@ -1,11 +1,10 @@
 #include "random.hpp"
 
-#define SEED 922987996
 #define N_DISCARD 10000
 
-UnifDist::UnifDist() {
+UnifDist::UnifDist(std::uint_fast32_t seed) {
   // generator
-  std::minstd_rand0 lc_generator(SEED);
+  std::minstd_rand0 lc_generator(seed);
   std::uint_least32_t seed_data[std::mt19937::state_size];
 
   std::generate_n(seed_data, std::mt19937::state_size, std::ref(lc_generator));

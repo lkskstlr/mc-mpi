@@ -4,9 +4,11 @@
 #include "types.hpp"
 #include <random>
 
+#define SOME_SEED 922987996
+
 class UnifDist {
 public:
-  UnifDist();
+  UnifDist(std::uint_fast32_t seed);
   real_t operator()();
 
 private:
