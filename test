@@ -1,0 +1,30 @@
+#!/bin/bash
+
+build=build_test_5076246861
+declare -a tests=("test_async_comm") # space separated list ("test_1" "test_2")
+
+
+# set directory
+cd "$(dirname "$0")"
+
+# Build
+rm -rf "$build"
+mkdir "$build"
+cd "$build"
+echo "cmake -DCMAKE_BUILD_TYPE=Release .."
+cmake -DCMAKE_BUILD_TYPE=Release .. > /dev/null
+for t in "${tests[@]}"
+do
+   echo "make $t"
+   make "$t" > /dev/null 
+done
+
+# Run
+echo "Running tests. Should print CORRECT after at most x seconds:"
+echo -n "    Test Async Comm ( 1 sec): "
+mpirun -n 10 ./test_async_comm
+
+
+echo "COMPLETE"
+cd ..
+rm -rf "$build"

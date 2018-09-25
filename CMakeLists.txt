@@ -52,7 +52,7 @@ target_link_libraries(main
 )
 
 # Tests
-add_executable(test_async_comm test/test_async_comm.cpp)
+add_executable(test_async_comm src_test/test_async_comm.cpp)
 target_include_directories(test_async_comm PRIVATE include)
 set_target_properties(test_async_comm PROPERTIES
     CXX_STANDARD 17
