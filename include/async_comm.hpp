@@ -1,8 +1,8 @@
 #ifndef ASYNC_COMM_HPP
 #define ASYNC_COMM_HPP
 
-#include "stdio.h"
 #include <mpi.h>
+#include <stdio.h>
 #include <vector>
 
 #define SEND_INFO_INITIAL_RESERVE 256
@@ -57,7 +57,19 @@ public:
     send_info.bytes = sizeof(T) * data.size();
 
     // Use only limited space
-    assert(send_info.bytes <= max_buffer_size);
+    if (send_info.bytes > max_buffer_size) {
+      fprintf(stderr,
+              "Abort in AsyncComm. Trying to send a message > "
+              "max_buffer_size. world_rank = %d, message size = %zu "
+              "bytes, max_bufer_size = %zu, dest = %d, tag = %d\n",
+              world_rank, send_info.bytes, max_buffer_size, dest, tag);
+      assert(send_info.bytes <=
+             max_buffer_size); // gives nicer error message, but only in DEBUG
+      MPI_Abort(MPI_COMM_WORLD, 1);
+    }
+
+    // potentially (at least once) free memory. This will lock if the buffer is
+    // small and some sends have not completed.
     do {
       this->free();
     } while (curr_buffer_size + send_info.bytes > max_buffer_size);

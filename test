@@ -1,7 +1,8 @@
 #!/bin/bash
 
-build=build_test_5076246861
 declare -a tests=("test_async_comm") # space separated list ("test_1" "test_2")
+build=build_test_S9peX6noUt0qQaFBcTWp # a safeguard to delete nothing that is important
+
 
 
 # set directory
