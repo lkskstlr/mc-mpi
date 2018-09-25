@@ -30,7 +30,7 @@ endif(DEFINED ENV{CXX})
 add_library(libmc-mpi SHARED
     src/random.cpp
     src/layer.cpp
-    src/worker.cpp
+    #src/worker.cpp
 )
 target_include_directories(libmc-mpi PUBLIC include)
 set_target_properties(libmc-mpi PROPERTIES
@@ -51,14 +51,14 @@ target_link_libraries(main
     libmc-mpi
 )
 
-# # Tests
-# add_executable(test src/test.cpp)
-# target_include_directories(test PRIVATE include)
-# set_target_properties(test PROPERTIES
-#     CXX_STANDARD 17
-#     CXX_STANDARD_REQUIRED YES
-#     CXX_EXTENSIONS NO
-# )
-# target_link_libraries(test
-#     libmc-mpi
-# )
+# Tests
+add_executable(test_async_comm test/test_async_comm.cpp)
+target_include_directories(test_async_comm PRIVATE include)
+set_target_properties(test_async_comm PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED YES
+    CXX_EXTENSIONS NO
+)
+target_link_libraries(test_async_comm
+    libmc-mpi
+)

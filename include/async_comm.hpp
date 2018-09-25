@@ -24,11 +24,14 @@ public:
    * communicator. mpi_t has to be the mpi datatype for T, the template
    * parameter of the class
    *
+   * \param[in] world_rank mpi world rank
    * \param[in] mpi_t the mpi datatype for T, the template parameter of the
    * class
    * \param[in] max_buffer_size maximum size of internal buffer in bytes
    */
-  void init(MPI_Datatype const mpi_t, std::size_t max_buffer_size) {
+  void init(int world_rank, MPI_Datatype const mpi_t,
+            std::size_t max_buffer_size) {
+    this->world_rank = world_rank;
     this->mpi_t = mpi_t;
     this->max_buffer_size = max_buffer_size;
     send_infos.reserve(SEND_INFO_INITIAL_RESERVE);
@@ -65,15 +68,12 @@ public:
     MPI_Issend(send_info.buf, data.size(), mpi_t, dest, tag, MPI_COMM_WORLD,
                &send_info.request);
 
-    // if (tag == 2) {
-    //   printf("----------ASYNC COMM SEND TAG = 2, dest = %d, n_buf = %ld\n",
-    //          dest, send_infos.size());
-    // }
-
-    if (tag == 1) {
-      printf("---JUHU-------ASYNC COMM SEND TAG = 1, dest = %d, n_buf = %ld\n",
-             dest, send_infos.size());
-    }
+#ifndef NDEBUG
+    printf("AsynCommSend: %4d -> %4d (%5d) : %10zu bytes, buff = (%8zu/%8zu)\n",
+           world_rank, dest, tag, send_info.bytes, curr_buffer_size,
+           max_buffer_size);
+#endif
+    curr_buffer_size += send_info.bytes;
     send_infos.push_back(send_info);
   };
 
@@ -95,20 +95,15 @@ public:
     int nb_data = -1;
     do {
       MPI_Iprobe(source, tag, MPI_COMM_WORLD, &flag, &status);
-      if (source == 8) {
-        printf("TTTTTTAAAAAAAADDDDDDDDAAAAAAAAAAAAA source = %d, flag = %d\n",
-               source, flag);
-      }
       if (flag) {
-        if (tag == 1) {
-          printf("---JUHU-------ASYNC COMM RECV TAG = 1, source = %d\n",
-                 status.MPI_SOURCE);
-        }
         MPI_Get_count(&status, mpi_t, &nb_data);
         T *buf = (T *)malloc(sizeof(T) * nb_data);
         MPI_Recv(buf, nb_data, mpi_t, status.MPI_SOURCE, tag, MPI_COMM_WORLD,
                  MPI_STATUSES_IGNORE);
-
+#ifndef NDEBUG
+        printf("AsynCommRecv: %4d -> %4d (%5d) : %10d bytes\n",
+               status.MPI_SOURCE, world_rank, tag, nb_data);
+#endif
         data.reserve(data.size() + nb_data);
         for (std::size_t i = 0; i < nb_data; ++i) {
           data.push_back(buf[i]);
@@ -121,7 +116,6 @@ public:
     return (nb_data != -1);
   };
 
-private:
   // frees up memory in buffer
   void free() {
     MPI_Status status;
@@ -143,6 +137,7 @@ private:
     }
   };
 
+  int world_rank;
   std::size_t curr_buffer_size = 0;
   std::size_t max_buffer_size;
   std::size_t max_buffer_size_attained = 0;
