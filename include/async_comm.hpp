@@ -140,7 +140,6 @@ public:
   int world_rank;
   std::size_t curr_buffer_size = 0;
   std::size_t max_buffer_size;
-  std::size_t max_buffer_size_attained = 0;
 
   MPI_Datatype mpi_t;
   std::vector<SendInfo> send_infos;
