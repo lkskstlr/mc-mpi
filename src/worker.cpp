@@ -24,10 +24,10 @@ Worker::Worker(int world_rank, const McOptions &options)
                          &mpi_particle_type);
   MPI_Type_commit(&mpi_particle_type);
 
-  particle_comm.init(mpi_particle_type, options.buffer_size);
+  particle_comm.init(world_rank, mpi_particle_type, options.buffer_size);
 
   /* Event as int */
-  event_comm.init(MPI_INT, options.buffer_size);
+  event_comm.init(world_rank, MPI_INT, options.buffer_size);
 }
 
 void Worker::spin() {

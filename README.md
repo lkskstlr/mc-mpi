@@ -1,7 +1,7 @@
 # mc-mpi
 
 ## Build & Run
-Standard CMake project. This assumes you use a unix system.
+Standard CMake project. This assumes you use a Unix system.
 ```bash
 git clone https://github.com/lkskstlr/mc-mpi.git
 cd mc-mpi
@@ -21,7 +21,7 @@ Running tests. Should print CORRECT after at most x seconds:
     Test Async Comm ( 1 sec): CORRECT
 COMPLETE
 ```
-i.e. one indented line per test. If it says FAILURE (or abort or an error message), the test will internally have failed and noticed the failure. If it prints nothing for more than x sec (here x = 1) there is probably a deadloc and the test didn't pass.
+i.e. one indented line per test. If it says FAILURE (or abort or an error message), the test will internally have failed and noticed the failure. If it prints nothing for more than x sec (here x = 1) there is probably a deadlock and the test didn't pass.
 
 ---
 The project can be opened with sublime text. A build system and settings for EasyClangComplete are set.

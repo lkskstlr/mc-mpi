@@ -30,7 +30,7 @@ endif(DEFINED ENV{CXX})
 add_library(libmc-mpi SHARED
     src/random.cpp
     src/layer.cpp
-    #src/worker.cpp
+    src/worker.cpp
 )
 target_include_directories(libmc-mpi PUBLIC include)
 set_target_properties(libmc-mpi PROPERTIES
