@@ -28,14 +28,14 @@ i.e. one indented line per test. If it says FAILURE (or abort or an error messag
 ### Classes
 | Class         | Header | @brief      |
 |---------------|--------|-------------|
-| Partcile etc. |types.hpp  | `real_t` and the Particle struct. |
+| Partcile etc. |types.hpp  | `real_t` and the `Particle` struct. |
 | UnifDist      |random.hpp | Uniform (0,1] distribution based on mersenne twister. |
 | Layer         |layer.hpp  | Representing one cell/layer in the simulation. Physics are implemented here. |
-| Worker        |worker.hpp | Manages the control flow of one mpi process. Has members of type `UnifDist`, `Layer`and `AsyncComm`. Each process instantiates exactly one. |
-| AsyncComm<T>. |async_comm.hpp| Encapsulation of asynchronous, buffered mpi communication. Internally handles all buffering. Templated. |
+| Worker        |worker.hpp | Manages the control flow of one mpi process. Has members of type `UnifDist`, `Layer`and `AsyncComm`. Each process instantiates exactly one worker. |
+| AsyncComm&lt;T&gt; |async_comm.hpp| Encapsulation of asynchronous, buffered mpi communication. Internally handles all buffering. Templated. |
 
 ### MPI Strategy
-Because there is no interaction among the particles, the processes are not synchronized in any way. When enough particles have left the layer of one process, he will send them to his neighbors by a buffered `MPI_Issend` and the `AsyncComm` will handle the buffer. Each process does the following steps
+Because there is no interaction among the particles, the processes are not synchronized in any way. When the process has completed a certain number of simulation steps, he will send the particles which left the layer to his neighbors by a buffered `MPI_Issend` and the `AsyncComm` will handle the buffer. Each process does the following steps
 ```
 simulate -> send -> receive -> receive events -> simulate -> ...
 ```
