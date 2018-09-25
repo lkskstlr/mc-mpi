@@ -1,6 +1,4 @@
 #include "layer.hpp"
-#include "stdio.h"
-#include <algorithm>
 
 #ifndef VECTOR_RESERVE
 #define VECTOR_RESERVE 10000
@@ -12,13 +10,8 @@ Layer decompose_domain(UnifDist &dist, real_t x_min, real_t x_max, real_t x_ini,
   assert(x_max > x_min);
   real_t dx = (x_max - x_min) / world_size;
   int nc_ini = (int)((x_ini - x_min) / dx);
-  // printf("======= world_size = %d, (x_min, x_max, x_ini, dx) = (%f, %f, %f, "
-  //        "%f), nc_ini = %d =====",
-  //        world_size, x_min, x_max, x_ini, dx, nc_ini);
   Layer layer(x_min + world_rank * dx, x_min + (1 + world_rank) * dx);
   if (world_rank == nc_ini) {
-    // printf("======= rank = %d decompose_domain creates particles =====",
-    //        world_rank);
     layer.create_particles(dist, x_ini, 1.0 / nb_particles, nb_particles);
   }
 
@@ -94,7 +87,6 @@ int Layer::particle_step(UnifDist &dist, Particle &particle) {
 
   return index_new;
 }
-template <typename T> int sgn(T val) { return (T(0) < val) - (val < T(0)); }
 
 void Layer::simulate(UnifDist &dist, std::size_t nb_steps,
                      std::vector<Particle> &particles_left,

@@ -40,7 +40,8 @@ void Worker::spin() {
   while (flag) {
     start = high_resolution_clock::now();
     // simulate
-    layer.simulate(dist, 100'000'000, particles_left, particles_right);
+    layer.simulate(dist, MCMPI_NB_STEPS_PER_CYCLE, particles_left,
+                   particles_right);
 
     /* Send & Recv of Particles */
     {
@@ -70,21 +71,17 @@ void Worker::spin() {
         // Send number particles to master (rank = 0)
         std::vector<int> nb_particles_disabled;
         nb_particles_disabled.push_back(particles_right.size());
-        printf("BLUBBBBB dis = %d\n", nb_particles_disabled.back());
         event_comm.send(nb_particles_disabled, 0, MCMPI_NB_DISABLED_TAG);
       }
 
       if (world_rank == 0) {
         // master
         std::vector<int> nb_particles_disabled_right_vec;
-        bool recv_dis =
-            event_comm.recv(nb_particles_disabled_right_vec,
-                            options.world_size - 1, MCMPI_NB_DISABLED_TAG);
-        printf("-----MASTER n = %ld\n", nb_particles_disabled_right_vec.size());
-        if (recv_dis && !nb_particles_disabled_right_vec.empty()) {
+        if (event_comm.recv(nb_particles_disabled_right_vec,
+                            options.world_size - 1, MCMPI_NB_DISABLED_TAG) &&
+            !nb_particles_disabled_right_vec.empty()) {
           size_t nb_disabled_right =
               static_cast<size_t>(nb_particles_disabled_right_vec[0]);
-          printf("=====MASTER nb_disabled_right = %ld\n", nb_disabled_right);
           if (particles_left.size() + nb_disabled_right ==
               options.nb_particles) {
             // end of simulation
@@ -93,7 +90,6 @@ void Worker::spin() {
               finished_vec.push_back(1);
               event_comm.send(finished_vec, i, MCMPI_FINISHED_TAG);
             }
-            printf("Master: Simulation finished!\n");
             flag = false;
           }
         }
@@ -101,13 +97,8 @@ void Worker::spin() {
 
       if (world_rank > 0) {
         std::vector<int> finished_vec;
-        bool did_receive = event_comm.recv(finished_vec, 0, MCMPI_FINISHED_TAG);
-        printf("[%03d/%03d]: n_recv_event = %ld\n", world_rank,
-               options.world_size, finished_vec.size());
-        if (did_receive) {
+        if (event_comm.recv(finished_vec, 0, MCMPI_FINISHED_TAG)) {
           // end of simulation
-          printf("Process [%d,%d]: Simulation finished.\n", world_rank,
-                 options.world_size);
           flag = false;
         }
       }
@@ -117,11 +108,15 @@ void Worker::spin() {
     finish = high_resolution_clock::now();
     std::chrono::duration<double, std::milli> elapsed = finish - start;
 
-    printf("[%03d/%03d]: n = %08ld t = %fms\n", world_rank, options.world_size,
+#ifndef NDEBUG
+    printf("[%3d/%3d]: n = %8zu, t = %f ms\n", world_rank, options.world_size,
            layer.particles.size(), elapsed.count());
-    if (elapsed.count() < MC_MPI_WAIT_MS) {
+#endif
+    if (elapsed.count() < MCMPI_WAIT_MS) {
       std::this_thread::sleep_for(
-          std::chrono::duration<double, std::milli>(MC_MPI_WAIT_MS) - elapsed);
+          std::chrono::duration<double, std::milli>(MCMPI_WAIT_MS) - elapsed);
     }
   }
 }
+
+real_t Worker::weight_absorbed() { return layer.weight_absorbed; }

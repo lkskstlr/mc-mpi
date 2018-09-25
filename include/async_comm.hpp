@@ -149,6 +149,7 @@ public:
     }
   };
 
+private:
   int world_rank;
   std::size_t curr_buffer_size = 0;
   std::size_t max_buffer_size;
