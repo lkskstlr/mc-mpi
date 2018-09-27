@@ -3,5 +3,5 @@ build/
 graveyard/
 sequential/
 mc_mpi.sublime-workspace
-toy_examples/
 README.pdf
+toy_examples/logs

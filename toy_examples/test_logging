@@ -1,0 +1,7 @@
+#!/bin/bash
+
+if [[ $(diff logging2 logging3) ]]; then
+    (>&2 echo -e "\033[0;31mERROR: Compiling with logging.h included but -DNDEBUG leaves a binary trace.\033[0m")
+else
+    echo -e "\033[0;32mCORRECT: Compiling with logging.h included but -DNDEBUG leaves no binary trace.\033[0m"
+fi

@@ -46,6 +46,26 @@ There are different settings that influence behavior. The most important ones ar
   + `worker.hpp` C-style defines
   + `main.cpp` Settings
 
+
+### Logging
+A minimal logging implementation can be found in `include/logging.h`. The basic usage is as follows:
+```cpp
+MPI_Init(NULL, NULL);
+int world_size, world_rank;
+
+MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
+
+MCMPI_DEBUG_INIT(world_rank)
+MCMPI_DEBUG("My world rank is %d", world_rank)
+
+MCMPI_DEBUG_STOP()
+MPI_Finalize();
+```
+
+The logs are written to `logs/<world_rank>.txt` where the user has to create the folder `logs` in the directory where the binary is run, e.g. in `build`. An example can be found in `toy_examples/logging.c`. The logging is global in all files that include `logging.h` but local per mpi processor. If one compiles with `-DNDEBUG` (included in `-DCMAKE_BUILD_TYPE=Release`) the logging disappears without a trace and doesn't have any runtime costs. This can be checked by `cd toy_examples; make test;`.
+
+
 ---
 The project can be opened with sublime text. A build system and settings for EasyClangComplete are set.
 
