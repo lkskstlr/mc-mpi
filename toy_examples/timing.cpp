@@ -25,6 +25,7 @@ int main(int argc, char const *argv[]) {
   timer.stop(id);
 
   std::cout << timer << std::endl;
+  std::cout << "The tick is " << timer.tick() * 1000.0 << " ms" << std::endl;
 
   return 0;
 }

@@ -11,6 +11,8 @@ void Timer::stop(id_t id) {
   cumm_times[id] += (endtime - start_times[id]);
 }
 
+double Timer::tick() { return MPI_Wtick(); }
+
 std::ostream &operator<<(std::ostream &os, const Timer &timer) {
   using std::endl;
   const std::string timer_types[] = {"Computation", "Send", "Receive", "Idle"};

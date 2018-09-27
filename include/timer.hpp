@@ -11,6 +11,7 @@ public:
 
   id_t start(Tag tag);
   void stop(id_t id);
+  double tick();
 
   friend std::ostream &operator<<(std::ostream &stream, const Timer &timer);
 

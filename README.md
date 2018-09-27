@@ -77,10 +77,12 @@ for (int i = 0; i < 1000; ++i) {
 timer.stop(id);
 
 std::cout << timer << std::endl;
+std::cout << "The tick is " << timer.tick() * 1000.0 << " ms" << std::endl;
 ```
 which generates the output
 ```shell-session
-Timer: (Computation=0.00214577 ms, Send=0 ms, Receive=0 ms, Idle=0 ms, Total=0.00214577 ms)
+Timer: (Computation=0.00309944 ms, Send=0 ms, Receive=0 ms, Idle=0 ms, Total=0.00309944 ms)
+The tick is 0.001 ms
 ```
 If `start` and `stop` are not called in matching pairs the behavior is undefined.
 
