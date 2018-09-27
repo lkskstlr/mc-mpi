@@ -80,7 +80,7 @@ std::cout << timer << std::endl;
 ```
 which generates the output
 ```shell-session
-Timer: (Computation=0.00214577 ms, Send=0 ms, Receive=0 ms, Idle=0 ms)
+Timer: (Computation=0.00214577 ms, Send=0 ms, Receive=0 ms, Idle=0 ms, Total=0.00214577 ms)
 ```
 If `start` and `stop` are not called in matching pairs the behavior is undefined.
 

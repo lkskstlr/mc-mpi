@@ -16,10 +16,11 @@ std::ostream &operator<<(std::ostream &os, const Timer &timer) {
   const std::string timer_types[] = {"Computation", "Send", "Receive", "Idle"};
 
   os << "Timer: (";
-  id_t i = 0;
-  for (; i < Timer::Tag::STATE_COUNT - 1; ++i) {
+  double sum = 0.0;
+  for (Timer::id_t i = 0; i < Timer::Tag::STATE_COUNT; ++i) {
+    sum += timer.cumm_times[i];
     os << timer_types[i] << "=" << timer.cumm_times[i] * 1000.0 << " ms, ";
   }
-  os << timer_types[i] << "=" << timer.cumm_times[i] * 1000.0 << " ms) ";
+  os << "Total=" << sum * 1000.0 << " ms) ";
   return os;
 }
