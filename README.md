@@ -2,7 +2,7 @@
 
 ## Build & Run
 Standard CMake project. This assumes you use a Unix system.
-```bash
+```shell-session
 git clone https://github.com/lkskstlr/mc-mpi.git
 cd mc-mpi
 export CXX=mpicxx
@@ -64,6 +64,25 @@ MPI_Finalize();
 ```
 
 The logs are written to `logs/<world_rank>.txt` where the user has to create the folder `logs` in the directory where the binary is run, e.g. in `build`. An example can be found in `toy_examples/logging.c`. The logging is global in all files that include `logging.h` but local per mpi processor. If one compiles with `-DNDEBUG` (included in `-DCMAKE_BUILD_TYPE=Release`) the logging disappears without a trace and doesn't have any runtime costs. This can be checked by `cd toy_examples; make test;`.
+
+### Timing
+A minimal timing class is provided in `include/timer.hpp` and can be used as follows:
+```cpp
+Timer timer;
+auto id = timer.start(Timer::Tag::Computation);
+int a = 1;
+for (int i = 0; i < 1000; ++i) {
+  a = (a + i) % 31;
+}
+timer.stop(id);
+
+std::cout << timer << std::endl;
+```
+which generates the output
+```shell-session
+Timer: (Computation=0.00214577 ms, Send=0 ms, Receive=0 ms, Idle=0 ms)
+```
+If `start` and `stop` are not called in matching pairs the behavior is undefined.
 
 
 ---
