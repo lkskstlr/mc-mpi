@@ -1,14 +1,11 @@
 #include "timer.hpp"
 #include <mpi.h>
 
-Timer::id_t Timer::start(Tag tag) {
-  start_times[tag] = MPI_Wtime();
-  return static_cast<id_t>(tag);
-}
+const Timer::Timestamp Timer::start(Tag tag) { return {tag, MPI_Wtime()}; }
 
-void Timer::stop(id_t id) {
+void Timer::stop(Timer::Timestamp timestamp) {
   double endtime = MPI_Wtime();
-  cumm_times[id] += (endtime - start_times[id]);
+  cumm_times[timestamp.tag] += (endtime - timestamp.starttime);
 }
 
 double Timer::tick() { return MPI_Wtick(); }

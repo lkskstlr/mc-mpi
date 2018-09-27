@@ -17,12 +17,12 @@ int main(int argc, char const *argv[]) {
 
   /* Test MPI Timer */
   Timer timer;
-  auto id = timer.start(Timer::Tag::Computation);
+  const auto timestamp = timer.start(Timer::Tag::Computation);
   int a = 1;
   for (int i = 0; i < 1000; ++i) {
     a = (a + i) % 31;
   }
-  timer.stop(id);
+  timer.stop(timestamp);
 
   std::cout << timer << std::endl;
   std::cout << "The tick is " << timer.tick() * 1000.0 << " ms" << std::endl;

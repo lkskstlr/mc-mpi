@@ -69,12 +69,12 @@ The logs are written to `logs/<world_rank>.txt` where the user has to create the
 A minimal timing class is provided in `include/timer.hpp` and can be used as follows:
 ```cpp
 Timer timer;
-auto id = timer.start(Timer::Tag::Computation);
+const auto timestamp = timer.start(Timer::Tag::Computation);
 int a = 1;
 for (int i = 0; i < 1000; ++i) {
   a = (a + i) % 31;
 }
-timer.stop(id);
+timer.stop(timestamp);
 
 std::cout << timer << std::endl;
 std::cout << "The tick is " << timer.tick() * 1000.0 << " ms" << std::endl;
@@ -84,8 +84,7 @@ which generates the output
 Timer: (Computation=0.00309944 ms, Send=0 ms, Receive=0 ms, Idle=0 ms, Total=0.00309944 ms)
 The tick is 0.001 ms
 ```
-If `start` and `stop` are not called in matching pairs the behavior is undefined.
-
+Calling `timer.start` with `const auto` return type is recommended. If timing overlaps, i.e. a second `timer.start` with the same `Timer::Tag` is called before the stop, then the overlapping part will be counted twice.
 
 ---
 The project can be opened with sublime text. A build system and settings for EasyClangComplete are set.
