@@ -5,3 +5,8 @@ sequential/
 mc_mpi.sublime-workspace
 README.pdf
 toy_examples/logs
+toy_examples/logging
+toy_examples/logging2
+toy_examples/logging3
+toy_examples/mpi_test
+toy_examples/timing

@@ -8,7 +8,7 @@
 /*!
  * \class Layer
  *
- * \brief Stores one layer/cell and the particles in it. Also does the
+ * \brief Stores one layer and the particles in it. Also does the
  * computations on the particles
  */
 class Layer {
@@ -20,8 +20,9 @@ public:
    *
    * \param[in] x_min min of layer, e.g. 0.2
    * \param[in] x_max max of layer, e.g. 0.4
+   * \param[in] m number of cells in this layer
    */
-  Layer(real_t x_min, real_t x_max);
+  Layer(real_t x_min, real_t x_max, std::size_t m);
 
   /*!
    * \function create_particles
@@ -64,11 +65,11 @@ private:
   int particle_step(UnifDist &dist, Particle &particle);
 
   // -- physical properties --
-  const real_t sig; // = exp(-0.5*(x_min+x_max))
+  std::vector<real_t> sigs; // = exp(-0.5*(x_min+x_max))
 
   /* magic numbers. interaction = 1 - absorption */
-  static constexpr real_t absorption_rate = 0.5;
-  static constexpr real_t interaction_rate = 1.0 - absorption_rate;
+  std::vector<real_t> absorption_rates;
+  std::vector<real_t> interaction_rate = 1.0 - absorption_rate;
 
   /* derived quantities */
   const real_t sig_i; // = sig * interaction_rate
