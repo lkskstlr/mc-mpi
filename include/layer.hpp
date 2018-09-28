@@ -22,7 +22,7 @@ public:
    * \param[in] x_max max of layer, e.g. 0.4
    * \param[in] m number of cells in this layer
    */
-  Layer(real_t x_min, real_t x_max, std::size_t m);
+  Layer(real_t x_min, real_t x_max, std::size_t m, real_t particle_min_weight);
 
   /*!
    * \function create_particles
@@ -51,32 +51,32 @@ public:
    * that leave the layer to the left (x_min) will be appended
    * \param[in] particles_right reference to the vector at wich the particles
    * that leave the layer to the right (x_max) will be appended
+   * \param[in] particles_disabled reference to the vector at wich the particles
+   * that fall below the min weight will be appended
    */
   void simulate(UnifDist &dist, std::size_t nb_steps,
                 std::vector<Particle> &particles_left,
-                std::vector<Particle> &particles_right);
+                std::vector<Particle> &particles_right,
+                std::vector<Particle> &particles_disabled);
 
   // -- Data --
   const real_t x_min, x_max;
   std::vector<Particle> particles;
-  real_t weight_absorbed = 0;
+  std::vector<real_t> weights_absorbed;
 
 private:
   int particle_step(UnifDist &dist, Particle &particle);
 
   // -- physical properties --
+  const real_t dx;
+  const std::size_t m;
   std::vector<real_t> sigs; // = exp(-0.5*(x_min+x_max))
-
-  /* magic numbers. interaction = 1 - absorption */
   std::vector<real_t> absorption_rates;
-  std::vector<real_t> interaction_rate = 1.0 - absorption_rate;
-
-  /* derived quantities */
-  const real_t sig_i; // = sig * interaction_rate
-  const real_t sig_a; // = sig * absorption_rate
+  const real_t particle_min_weight;
 };
 
 Layer decompose_domain(UnifDist &dist, real_t x_min, real_t x_max, real_t x_ini,
                        int world_size, int world_rank,
-                       std::size_t nb_particles);
+                       std::size_t cells_per_layer, std::size_t nb_particles,
+                       real_t particle_min_weight);
 #endif

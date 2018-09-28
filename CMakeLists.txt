@@ -27,10 +27,16 @@ else(DEFINED ENV{CXX})
     message(FATAL_ERROR "Please define the environment variable for the mpi capable cxx compiler. On unix system through e.g. 'export CXX=mpicxx'.")
 endif(DEFINED ENV{CXX})
 
+OPTION(DEFINE_NDEBUG "NDEBUG is defined" ON) # Enabled by default
+IF(DEFINE_NDEBUG)
+    ADD_DEFINITIONS(-DNDEBUG)
+ENDIF(DEFINE_NDEBUG)
+
 add_library(libmc-mpi SHARED
     src/random.cpp
     src/layer.cpp
     src/worker.cpp
+    src/timer.cpp
 )
 target_include_directories(libmc-mpi PUBLIC include)
 set_target_properties(libmc-mpi PROPERTIES

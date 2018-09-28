@@ -9,8 +9,14 @@
 #define MCMPI_PARTICLE_TAG 1
 #define MCMPI_NB_DISABLED_TAG 2
 #define MCMPI_FINISHED_TAG 3
+
+#ifndef NDEBUG
+#define MCMPI_WAIT_MS 1000
+#define MCMPI_NB_STEPS_PER_CYCLE 1
+#else
 #define MCMPI_WAIT_MS 1
-#define MCMPI_NB_STEPS_PER_CYCLE 1000
+#define MCMPI_NB_STEPS_PER_CYCLE 10000
+#endif
 
 /*!
  * \struct McOptions
@@ -18,9 +24,12 @@
  * \brief Options for the Monte Carlo Simulation
  */
 typedef struct mc_options_tag {
-  int world_size; /** number of processes/layers in the simulation */
+  int world_size;         /** number of processes/layers in the simulation */
+  int nb_cells_per_layer; /** number of cells in each layer */
   real_t x_min, x_max,
       x_ini; /** x_min, x_max and x_ini of the global simulation */
+
+  real_t particle_min_weight; /** If weight < ... the particle is disabled */
 
   std::size_t buffer_size;  /** buffer size in bytes of the async_comm send
                                buffer. Higher is better, e.g. 1024*1024 */
@@ -55,22 +64,22 @@ public:
   void spin();
 
   /*!
-   * \function weight_absorbed
+   * \function weights_absorbed
    *
    * \brief Calculates the total absorbed weight in the simulation (at this
    * point)
    *
    * \return real_t total absorbed weight
    */
-  real_t weight_absorbed();
+  std::vector<real_t> weights_absorbed();
 
-private:
+  // private:
   const int world_rank;
   const McOptions options;
   UnifDist dist;
   Layer layer;
   AsyncComm<Particle> particle_comm;
-  std::vector<Particle> particles_left, particles_right;
+  std::vector<Particle> particles_left, particles_right, particles_disabled;
   AsyncComm<int> event_comm;
 };
 #endif

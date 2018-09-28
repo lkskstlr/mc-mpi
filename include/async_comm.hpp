@@ -90,6 +90,55 @@ public:
   };
 
   /*!
+   * \function send
+   *
+   * \brief Stores data in buffer and sends it when possible
+   *
+   * \param[in] instance One instance of T to be sent
+   * \param[in] dest Destination
+   * \param[in] tag tag, can be MPI_ANY_TAG
+   *
+   * \return void
+   */
+  void send(T const &instance, int dest, int tag) {
+
+    SendInfo send_info;
+    send_info.bytes = sizeof(T);
+
+    // Use only limited space
+    if (send_info.bytes > max_buffer_size) {
+      fprintf(stderr,
+              "Abort in AsyncComm. Trying to send a message > "
+              "max_buffer_size. world_rank = %d, message size = %zu "
+              "bytes, max_bufer_size = %zu, dest = %d, tag = %d\n",
+              world_rank, send_info.bytes, max_buffer_size, dest, tag);
+      assert(send_info.bytes <=
+             max_buffer_size); // gives nicer error message, but only in DEBUG
+      MPI_Abort(MPI_COMM_WORLD, 1);
+    }
+
+    // potentially (at least once) free memory. This will lock if the buffer is
+    // small and some sends have not completed.
+    do {
+      this->free();
+    } while (curr_buffer_size + send_info.bytes > max_buffer_size);
+
+    send_info.buf = (T *)malloc(send_info.bytes);
+    memcpy(send_info.buf, &instance, send_info.bytes);
+
+    MPI_Issend(send_info.buf, 1, mpi_t, dest, tag, MPI_COMM_WORLD,
+               &send_info.request);
+
+#ifndef NDEBUG
+    printf("AsynCommSend: %4d -> %4d (%5d) : %10zu bytes, buff = (%8zu/%8zu)\n",
+           world_rank, dest, tag, send_info.bytes, curr_buffer_size,
+           max_buffer_size);
+#endif
+    curr_buffer_size += send_info.bytes;
+    send_infos.push_back(send_info);
+  };
+
+  /*!
    * \function recv
    *
    * \brief Will receive any data that is waiting to be sent.

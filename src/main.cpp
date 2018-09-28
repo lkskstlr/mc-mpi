@@ -23,6 +23,7 @@ int main(int argc, char **argv) {
   opt.x_max = 1.0;
   opt.x_ini = sqrt(2.) / 2;
   opt.buffer_size = pow(2, 24);
+  opt.nb_cells_per_layer = 2;
 
   // -- MPI Setup --
   MPI_Init(NULL, NULL);
@@ -36,10 +37,16 @@ int main(int argc, char **argv) {
   parse_input(argc, argv, world_rank, &(opt.nb_particles));
 
   Worker worker(world_rank, opt);
+
+  printf("Worker [%3d/%3d]: (%f, %f)\n", world_rank, world_size,
+         worker.layer.x_min, worker.layer.x_max);
   worker.spin();
 
-  printf("Layer [%3d/%3d]: absorbed weight = %f\n", world_rank, world_size,
-         worker.weight_absorbed());
+  printf("Layer [%3d/%3d]: absorbed weight = (\n", world_rank, world_size);
+  for (auto w : worker.weights_absorbed()) {
+    printf("%f, ", w);
+  }
+  printf(")\n");
   MPI_Finalize();
   return 0;
 }
