@@ -1,6 +1,6 @@
 #!/bin/bash
 
-declare -a tests=("test_async_comm") # space separated list ("test_1" "test_2")
+declare -a tests=("test_async_comm" "test_serialization") # space separated list ("test_1" "test_2")
 build=build_test_S9peX6noUt0qQaFBcTWp # a safeguard to delete nothing that is important
 
 
@@ -22,8 +22,13 @@ done
 
 # Run
 echo "Running tests. Should print CORRECT after at most x seconds:"
-echo -n "    Test Async Comm ( 1 sec): "
-mpirun -n 10 ./test_async_comm
+
+
+echo -n "    Test Async Comm    ( 1 sec): "
+mpirun -n 10 ./test_async_comm;
+
+echo -n "    Test Serialization ( 1 sec): "
+mpirun -n 10 ./test_serialization;
 
 
 echo "COMPLETE"

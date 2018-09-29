@@ -6,7 +6,6 @@
 #include <vector>
 
 #define SEND_INFO_INITIAL_RESERVE 256
-#define NDEBUG
 
 template <typename T> class AsyncComm {
 

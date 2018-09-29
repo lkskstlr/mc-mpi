@@ -37,6 +37,7 @@ add_library(libmc-mpi SHARED
     src/layer.cpp
     src/worker.cpp
     src/timer.cpp
+    src/particle_comm.cpp
 )
 target_include_directories(libmc-mpi PUBLIC include)
 set_target_properties(libmc-mpi PROPERTIES
@@ -66,5 +67,16 @@ set_target_properties(test_async_comm PROPERTIES
     CXX_EXTENSIONS NO
 )
 target_link_libraries(test_async_comm
+    libmc-mpi
+)
+
+add_executable(test_serialization src_test/test_serialization.cpp)
+target_include_directories(test_serialization PRIVATE include)
+set_target_properties(test_serialization PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED YES
+    CXX_EXTENSIONS NO
+)
+target_link_libraries(test_serialization
     libmc-mpi
 )
