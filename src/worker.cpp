@@ -12,14 +12,15 @@ Worker::Worker(int world_rank, const McOptions &options)
                              options.particle_min_weight)) {
   /* Particle as MPI Type */
   MPI_Datatype mpi_particle_type;
-  constexpr int nitems = 3;
-  int blocklengths[nitems] = {1, 1, 1};
-  MPI_Datatype types[nitems] = {MPI_FLOAT, MPI_FLOAT, MPI_FLOAT};
+  constexpr int nitems = 4;
+  int blocklengths[nitems] = {1, 1, 1, 1};
+  MPI_Datatype types[nitems] = {MPI_FLOAT, MPI_FLOAT, MPI_FLOAT, MPI_INT};
   MPI_Aint offsets[nitems];
 
   offsets[0] = offsetof(Particle, x);
   offsets[1] = offsetof(Particle, mu);
   offsets[2] = offsetof(Particle, wmc);
+  offsets[3] = offsetof(Particle, index);
 
   MPI_Type_create_struct(nitems, blocklengths, offsets, types,
                          &mpi_particle_type);

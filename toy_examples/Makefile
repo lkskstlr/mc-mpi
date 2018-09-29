@@ -2,7 +2,7 @@ CC=mpicc
 CXX=mpicxx
 CFLAGS=-I../include/ -O3
 
-all:mpi_test logging logging2 logging3 timing
+all:mpi_test logging logging2 logging3 timing assert_debug assert_release
 
 .PHONY: test
 test: test_logging
@@ -10,6 +10,12 @@ test: test_logging
 .PHONY: test_logging
 test_logging: logging2 logging3
 	./test_logging
+
+assert_debug: assert.cpp
+	$(CXX) -g -o $@ $^
+
+assert_release: assert.cpp
+	$(CXX) -DNDEBUG -O3 -o $@ $^
 
 mpi_test: mpi_test.c
 	$(CC) $(CFLAGS) -o $@ $^
@@ -28,4 +34,5 @@ logging3: logging3.c
 
 .PHONY: clean
 clean:
-	rm -f mpi_test timing logging logging2 logging3 logs/*
+	rm -f mpi_test timing logging logging2 logging3 logs/* assert_debug assert_release
+	rm -rf assert_debug.dSYM

@@ -22,7 +22,7 @@ public:
    * \param[in] x_max max of layer, e.g. 0.4
    * \param[in] m number of cells in this layer
    */
-  Layer(real_t x_min, real_t x_max, std::size_t index_start, std::size_t m,
+  Layer(real_t x_min, real_t x_max, int index_start, int m,
         real_t particle_min_weight);
 
   /*!
@@ -36,8 +36,7 @@ public:
    * \param[in] wmc weight monte carlo
    * \param[in] n number of partciles to create
    */
-  void create_particles(UnifDist &dist, real_t x_ini, real_t wmc,
-                        std::size_t n);
+  void create_particles(UnifDist &dist, real_t x_ini, real_t wmc, int n);
 
   /*!
    * \function simulate
@@ -55,7 +54,7 @@ public:
    * \param[in] particles_disabled reference to the vector at wich the particles
    * that fall below the min weight will be appended
    */
-  void simulate(UnifDist &dist, std::size_t nb_steps,
+  void simulate(UnifDist &dist, int nb_steps,
                 std::vector<Particle> &particles_left,
                 std::vector<Particle> &particles_right,
                 std::vector<Particle> &particles_disabled);
@@ -70,15 +69,14 @@ private:
 
   // -- physical properties --
   const real_t dx;
-  const std::size_t m;
-  const std::size_t index_start;
+  const int m;
+  const int index_start;
   std::vector<real_t> sigs; // = exp(-0.5*(x_min+x_max))
   std::vector<real_t> absorption_rates;
   const real_t particle_min_weight;
 };
 
 Layer decompose_domain(UnifDist &dist, real_t x_min, real_t x_max, real_t x_ini,
-                       int world_size, int world_rank,
-                       std::size_t cells_per_layer, std::size_t nb_particles,
-                       real_t particle_min_weight);
+                       int world_size, int world_rank, int cells_per_layer,
+                       int nb_particles, real_t particle_min_weight);
 #endif
