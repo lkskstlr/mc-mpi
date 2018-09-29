@@ -22,7 +22,8 @@ public:
    * \param[in] x_max max of layer, e.g. 0.4
    * \param[in] m number of cells in this layer
    */
-  Layer(real_t x_min, real_t x_max, std::size_t m, real_t particle_min_weight);
+  Layer(real_t x_min, real_t x_max, std::size_t index_start, std::size_t m,
+        real_t particle_min_weight);
 
   /*!
    * \function create_particles
@@ -70,6 +71,7 @@ private:
   // -- physical properties --
   const real_t dx;
   const std::size_t m;
+  const std::size_t index_start;
   std::vector<real_t> sigs; // = exp(-0.5*(x_min+x_max))
   std::vector<real_t> absorption_rates;
   const real_t particle_min_weight;

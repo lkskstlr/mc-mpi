@@ -1,6 +1,7 @@
 #include "worker.hpp"
 #include <mpi.h>
 #include <stdio.h>
+#include <unistd.h>
 
 void parse_input(int argc, char **argv, int world_rank, size_t *nb_particles) {
   if (argc != 2 && world_rank == 0) {
@@ -35,6 +36,17 @@ int main(int argc, char **argv) {
 
   // parse input
   parse_input(argc, argv, world_rank, &(opt.nb_particles));
+
+  {
+    int i = 0;
+    char hostname[256];
+    gethostname(hostname, sizeof(hostname));
+    printf("PID %d on %s ready for attach\n", getpid(), hostname);
+    fflush(stdout);
+    // while (0 == i) {
+    //   sleep(5);
+    // }
+  }
 
   Worker worker(world_rank, opt);
 

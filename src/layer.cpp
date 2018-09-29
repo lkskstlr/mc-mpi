@@ -1,4 +1,5 @@
 #include "layer.hpp"
+#include <signal.h>
 
 #ifndef VECTOR_RESERVE
 #define VECTOR_RESERVE 10000
@@ -12,7 +13,8 @@ Layer decompose_domain(UnifDist &dist, real_t x_min, real_t x_max, real_t x_ini,
   real_t dx = (x_max - x_min) / world_size;
   int nc_ini = (int)((x_ini - x_min) / dx);
   Layer layer(x_min + world_rank * dx, x_min + (1 + world_rank) * dx,
-              cells_per_layer, particle_min_weight);
+              world_rank * cells_per_layer, cells_per_layer,
+              particle_min_weight);
   if (world_rank == nc_ini) {
     layer.create_particles(dist, x_ini, 1.0 / nb_particles, nb_particles);
   }
@@ -20,10 +22,10 @@ Layer decompose_domain(UnifDist &dist, real_t x_min, real_t x_max, real_t x_ini,
   return layer;
 }
 
-Layer::Layer(real_t x_min, real_t x_max, std::size_t m,
+Layer::Layer(real_t x_min, real_t x_max, std::size_t index_start, std::size_t m,
              real_t particle_min_weight)
-    : x_min(x_min), x_max(x_max), m(m), dx((x_max - x_min) / m),
-      particle_min_weight(particle_min_weight) {
+    : x_min(x_min), x_max(x_max), m(m), index_start(index_start),
+      dx((x_max - x_min) / m), particle_min_weight(particle_min_weight) {
 
   // sigs
   sigs.reserve(m);
@@ -49,6 +51,10 @@ void Layer::create_particles(UnifDist &dist, real_t x_ini, real_t wmc,
     particle.x = x_ini;
     particle.wmc = wmc;
 
+    // compute index
+    std::size_t index_local = static_cast<std::size_t>((x_ini - x_min) / dx);
+    particle.index = index_start + index_local;
+
     particles.reserve(n);
     for (std::size_t i = 0; i < n; ++i) {
       particle.mu = 2.0 * dist() - 1.0;
@@ -58,30 +64,23 @@ void Layer::create_particles(UnifDist &dist, real_t x_ini, real_t wmc,
 }
 
 int Layer::particle_step(UnifDist &dist, Particle &particle) {
-  // constants
-  int index_clostest_edge = round((particle.x - x_min) / dx);
-  // float problem: check if wrong cell by float eps
-  int tmp_index = static_cast<int>((particle.x - x_min) / dx);
-  if (abs(index_clostest_edge * dx + x_min - particle.x) < EPS_PRECISION) {
-#ifndef NDEBUG
-    printf("    ");
-#endif
-    if (particle.mu >= 0) {
-      tmp_index = index_clostest_edge;
-    } else {
-      tmp_index = index_clostest_edge - 1;
-    }
+  const real_t x_begin = particle.x;
+  const real_t mu_begin = particle.mu;
+
+  if (particle.x < x_min || particle.x > x_max) {
+    abort();
   }
-  const int index = tmp_index;
+
+  const int index_local = particle.index - index_start;
 
 #ifndef NDEBUG
   printf("step: (x_min, x_max) = (%f, %f), x_begin = %f, index = %d, mu = %f, ",
          x_min, x_max, particle.x, index, particle.mu);
 #endif
 
-  const real_t interaction_rate = 1.0 - absorption_rates[index];
-  const real_t sig_a = sigs[index] * absorption_rates[index];
-  const real_t sig_i = sigs[index] * interaction_rate;
+  const real_t interaction_rate = 1.0 - absorption_rates[index_local];
+  const real_t sig_a = sigs[index_local] * absorption_rates[index_local];
+  const real_t sig_i = sigs[index_local] * interaction_rate;
 
   // const real_t sig_i =
 
@@ -91,11 +90,11 @@ int Layer::particle_step(UnifDist &dist, Particle &particle) {
 
   if (particle.mu < -EPS_PRECISION || EPS_PRECISION < particle.mu) {
     if (particle.mu < 0) {
-      index_new = index - 1;
-      x_new_edge = index * dx + x_min;
+      index_new = particle.index - 1;
+      x_new_edge = particle.index * dx;
     } else {
-      index_new = index + 1;
-      x_new_edge = (index + 1) * dx + x_min;
+      index_new = particle.index + 1;
+      x_new_edge = (particle.index + 1) * dx;
     }
   }
   const real_t di_edge = (x_new_edge - particle.x) / particle.mu;
@@ -115,7 +114,7 @@ int Layer::particle_step(UnifDist &dist, Particle &particle) {
 #endif
   if (di < di_edge) {
     /* move inside cell an draw new mu */
-    index_new = index;
+    index_new = particle.index;
     particle.x += di * particle.mu;
     particle.mu = 2.0 * dist() - 1.0;
   } else {
@@ -129,11 +128,15 @@ int Layer::particle_step(UnifDist &dist, Particle &particle) {
 
   /* Weight removed from particle is added to the layer */
   particle.wmc -= dw;
-  weights_absorbed[index] += dw;
+  weights_absorbed[index_local] += dw;
 
 #ifndef NDEBUG
   printf("x_end = %f, index_new = %d\n", particle.x, index_new);
 #endif
+
+  if (particle.x < x_min || particle.x > x_max) {
+    abort();
+  }
   return index_new;
 }
 
@@ -159,10 +162,10 @@ void Layer::simulate(UnifDist &dist, std::size_t nb_steps,
       particles_disabled.push_back(particles.back());
       particles.pop_back();
     } else {
-      if (index_new == m) {
+      if (index_new == index_start + m) {
         particles_right.push_back(particles.back());
         particles.pop_back();
-      } else if (index_new == -1) {
+      } else if (index_new == index_start - 1) {
         particles_left.push_back(particles.back());
         particles.pop_back();
       }
