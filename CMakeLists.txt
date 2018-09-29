@@ -37,6 +37,7 @@ add_library(libmc-mpi SHARED
     src/layer.cpp
     src/worker.cpp
     src/timer.cpp
+    src/async_comm-impl.cpp
     src/particle_comm.cpp
 )
 target_include_directories(libmc-mpi PUBLIC include)
