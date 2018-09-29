@@ -1,8 +1,8 @@
 #ifndef WORKER_HPP
 #define WORKER_HPP
 
-#include "async_comm.hpp"
 #include "layer.hpp"
+#include "particle_comm.hpp"
 #include "random.hpp"
 #include "types.hpp"
 
@@ -78,7 +78,7 @@ public:
   const McOptions options;
   UnifDist dist;
   Layer layer;
-  AsyncComm<Particle> particle_comm;
+  ParticleComm particle_comm;
   std::vector<Particle> particles_left, particles_right, particles_disabled;
   AsyncComm<int> event_comm;
 };

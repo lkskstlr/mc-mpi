@@ -9,25 +9,8 @@ Worker::Worker(int world_rank, const McOptions &options)
       layer(decompose_domain(dist, options.x_min, options.x_max, options.x_ini,
                              options.world_size, world_rank,
                              options.nb_cells_per_layer, options.nb_particles,
-                             options.particle_min_weight)) {
-  /* Particle as MPI Type */
-  MPI_Datatype mpi_particle_type;
-  constexpr int nitems = 4;
-  int blocklengths[nitems] = {1, 1, 1, 1};
-  MPI_Datatype types[nitems] = {MPI_FLOAT, MPI_FLOAT, MPI_FLOAT, MPI_INT};
-  MPI_Aint offsets[nitems];
-
-  offsets[0] = offsetof(Particle, x);
-  offsets[1] = offsetof(Particle, mu);
-  offsets[2] = offsetof(Particle, wmc);
-  offsets[3] = offsetof(Particle, index);
-
-  MPI_Type_create_struct(nitems, blocklengths, offsets, types,
-                         &mpi_particle_type);
-  MPI_Type_commit(&mpi_particle_type);
-
-  particle_comm.init(world_rank, mpi_particle_type, options.buffer_size);
-
+                             options.particle_min_weight)),
+      particle_comm(world_rank, options.buffer_size) {
   /* Event as int */
   event_comm.init(world_rank, MPI_INT, options.buffer_size);
 }
