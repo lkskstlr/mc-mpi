@@ -42,11 +42,6 @@ void AsyncComm<T>::send(std::vector<T> const &data, int dest, int tag) {
   MPI_Issend(send_info.buf, data.size(), mpi_t, dest, tag, MPI_COMM_WORLD,
              &send_info.request);
 
-#ifndef NDEBUG
-  printf("AsynCommSend: %4d -> %4d (%5d) : %10zu bytes, buff = (%8zu/%8zu)\n",
-         world_rank, dest, tag, send_info.bytes, curr_buffer_size,
-         max_buffer_size);
-#endif
   curr_buffer_size += send_info.bytes;
   send_infos.push_back(send_info);
 }
@@ -81,11 +76,6 @@ void AsyncComm<T>::send(T const &instance, int dest, int tag) {
   MPI_Issend(send_info.buf, 1, mpi_t, dest, tag, MPI_COMM_WORLD,
              &send_info.request);
 
-#ifndef NDEBUG
-  printf("AsynCommSend: %4d -> %4d (%5d) : %10zu bytes, buff = (%8zu/%8zu)\n",
-         world_rank, dest, tag, send_info.bytes, curr_buffer_size,
-         max_buffer_size);
-#endif
   curr_buffer_size += send_info.bytes;
   send_infos.push_back(send_info);
 }
@@ -102,10 +92,7 @@ bool AsyncComm<T>::recv(std::vector<T> &data, int source, int tag) {
       T *buf = (T *)malloc(sizeof(T) * nb_data);
       MPI_Recv(buf, nb_data, mpi_t, status.MPI_SOURCE, tag, MPI_COMM_WORLD,
                MPI_STATUSES_IGNORE);
-#ifndef NDEBUG
-      printf("AsynCommRecv: %4d -> %4d (%5d) : %10d bytes\n", status.MPI_SOURCE,
-             world_rank, tag, nb_data);
-#endif
+
       data.reserve(data.size() + nb_data);
       for (std::size_t i = 0; i < nb_data; ++i) {
         data.push_back(buf[i]);

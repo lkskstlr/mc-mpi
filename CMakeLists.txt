@@ -27,10 +27,10 @@ else(DEFINED ENV{CXX})
     message(FATAL_ERROR "Please define the environment variable for the mpi capable cxx compiler. On unix system through e.g. 'export CXX=mpicxx'.")
 endif(DEFINED ENV{CXX})
 
-OPTION(DEFINE_NDEBUG "NDEBUG is defined" ON) # Enabled by default
-IF(DEFINE_NDEBUG)
-    ADD_DEFINITIONS(-DNDEBUG)
-ENDIF(DEFINE_NDEBUG)
+OPTION(DEBUG_VERBOSE "Verbose Logfiles are used" OFF) # Enabled by default
+IF(DEBUG_VERBOSE)
+    ADD_DEFINITIONS(-DMCMPI_LOG_VERBOSE)
+ENDIF(DEBUG_VERBOSE)
 
 add_library(libmc-base SHARED
     src/random.cpp

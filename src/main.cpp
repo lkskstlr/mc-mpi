@@ -68,6 +68,7 @@ int main(int argc, char **argv) {
 
   std::cout << "p = " << world_rank << worker.timer
             << ", t = " << timespan * 1000.0 << " ms, " << std::endl;
+
   MPI_Finalize();
   return 0;
 }
