@@ -98,7 +98,7 @@ auto timestamp = timer.start(Timer::Tag::Computation);
 // Computation
 timer.change(timestamp, Timer::Tag::Send);
 // Sending
-timer.change(timestamp, Timer::Tag::Send);
+timer.change(timestamp, Timer::Tag::Recv);
 //Receiving
 
 timer.stop(timestamp);
