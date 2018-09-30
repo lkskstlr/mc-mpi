@@ -8,8 +8,9 @@ cd mc-mpi
 export CXX=mpicxx
 mkdir build; cd build; cmake .. -DCMAKE_BUILD_TYPE=Release; make;
 mpirun -n 5 ./main 1000000
+cd ..; ./test
 ```
-The third line *sets the CXX environment variable* to an mpi compatible compiler. The last line runs on 5 processors with 1000000 particles.
+The third line *sets the CXX environment variable* to an mpi compatible compiler. The one but last line runs on 5 processors with 1000000 particles. The last line runs the unit [tests](#tests).
 
 
 ## Tests
