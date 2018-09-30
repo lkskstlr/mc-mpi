@@ -64,9 +64,9 @@ public:
   std::vector<Particle> particles;
   std::vector<real_t> weights_absorbed;
 
-private:
   int particle_step(UnifDist &dist, Particle &particle);
 
+  // private:
   // -- physical properties --
   const real_t dx;
   const int m;

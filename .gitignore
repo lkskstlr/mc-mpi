@@ -2,6 +2,7 @@
 build/
 graveyard/
 sequential/
+releases/
 mc_mpi.sublime-workspace
 README.pdf
 toy_examples/logs

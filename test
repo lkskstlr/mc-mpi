@@ -1,6 +1,6 @@
 #!/bin/bash
 
-declare -a tests=("test_async_comm" "test_serialization") # space separated list ("test_1" "test_2")
+declare -a tests=("test_async_comm" "test_serialization" "test_particle_step") # space separated list ("test_1" "test_2")
 build=build_test_S9peX6noUt0qQaFBcTWp # a safeguard to delete nothing that is important
 
 
@@ -16,8 +16,8 @@ echo "cmake -DCMAKE_BUILD_TYPE=Release .."
 cmake -DCMAKE_BUILD_TYPE=Release .. > /dev/null
 for t in "${tests[@]}"
 do
-   echo "make $t"
-   make "$t" > /dev/null 
+   echo "make -j4 $t"
+   make -j4 "$t" > /dev/null 
 done
 
 # Run
@@ -29,6 +29,9 @@ mpirun -n 10 ./test_async_comm;
 
 echo -n "    Test Serialization ( 1 sec): "
 mpirun -n 10 ./test_serialization;
+
+echo -n "    Test Particle Step ( 1 sec): "
+./test_particle_step;
 
 
 echo "COMPLETE"

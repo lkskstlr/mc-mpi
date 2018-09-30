@@ -16,11 +16,13 @@ The third line *sets the CXX environment variable* to an mpi compatible compiler
 A minimal testing script can be found in `test` and can be called by `./test`. A possible output is
 ```shell-session
 cmake -DCMAKE_BUILD_TYPE=Release ..
-make test_async_comm
-make test_serialization
+make -j4 test_async_comm
+make -j4 test_serialization
+make -j4 test_particle_step
 Running tests. Should print CORRECT after at most x seconds:
     Test Async Comm    ( 1 sec): CORRECT
     Test Serialization ( 1 sec): CORRECT
+    Test Particle Step ( 1 sec): CORRECT
 COMPLETE
 ```
 i.e. one indented line per test. If it says ERROR (or abort or an error message), the test will internally have failed and noticed the failure. If it prints nothing for more than x sec (here x = 1) there is probably a deadlock and the test didn't pass.

@@ -1,5 +1,5 @@
 #include "layer.hpp"
-#include <signal.h>
+#include <cmath>
 
 #ifndef VECTOR_RESERVE
 #define VECTOR_RESERVE 10000
@@ -82,7 +82,7 @@ int Layer::particle_step(UnifDist &dist, Particle &particle) {
 
   // calculate theoretic movement
   const real_t h = 1.0 - dist(); // in (0, 1]
-  real_t di = sig_i > EPS_PRECISION ? -log(h) / sig_i : MAXREAL;
+  real_t di = sig_i > EPS_PRECISION ? -std::log(h) / sig_i : MAXREAL;
 
   // -- possible new cell --
   int index_new;

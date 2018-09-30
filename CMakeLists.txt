@@ -32,9 +32,18 @@ IF(DEFINE_NDEBUG)
     ADD_DEFINITIONS(-DNDEBUG)
 ENDIF(DEFINE_NDEBUG)
 
-add_library(libmc-mpi SHARED
+add_library(libmc-base SHARED
     src/random.cpp
     src/layer.cpp
+)
+target_include_directories(libmc-base PUBLIC include)
+set_target_properties(libmc-base PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED YES
+    CXX_EXTENSIONS NO
+)
+
+add_library(libmc-mpi SHARED
     src/worker.cpp
     src/timer.cpp
     src/async_comm-impl.cpp
@@ -46,6 +55,10 @@ set_target_properties(libmc-mpi PROPERTIES
     CXX_STANDARD_REQUIRED YES
     CXX_EXTENSIONS NO
 )
+target_link_libraries(libmc-mpi
+  libmc-base
+)
+
 
 # Main
 add_executable(main src/main.cpp)
@@ -80,4 +93,15 @@ set_target_properties(test_serialization PROPERTIES
 )
 target_link_libraries(test_serialization
     libmc-mpi
+)
+
+add_executable(test_particle_step src_test/test_particle_step.cpp)
+target_include_directories(test_particle_step PRIVATE include)
+set_target_properties(test_particle_step PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED YES
+    CXX_EXTENSIONS NO
+)
+target_link_libraries(test_particle_step
+    libmc-base
 )
