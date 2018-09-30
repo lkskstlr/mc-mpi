@@ -4,6 +4,7 @@
 #include "layer.hpp"
 #include "particle_comm.hpp"
 #include "random.hpp"
+#include "timer.hpp"
 #include "types.hpp"
 
 #define MCMPI_PARTICLE_TAG 1
@@ -81,5 +82,7 @@ public:
   ParticleComm particle_comm;
   std::vector<Particle> particles_left, particles_right, particles_disabled;
   AsyncComm<int> event_comm;
+
+  Timer timer;
 };
 #endif

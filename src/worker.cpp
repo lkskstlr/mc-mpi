@@ -18,6 +18,8 @@ Worker::Worker(int world_rank, const McOptions &options)
 void Worker::spin() {
   using std::chrono::high_resolution_clock;
 
+  auto timestamp = timer.start(Timer::Tag::Idle);
+
   auto start = high_resolution_clock::now();
   auto finish = high_resolution_clock::now();
   std::vector<int> vec_nb_particles_disabled;
@@ -28,11 +30,16 @@ void Worker::spin() {
   bool flag = true;
   while (flag) {
     start = high_resolution_clock::now();
-    // simulate
-    layer.simulate(dist, MCMPI_NB_STEPS_PER_CYCLE, particles_left,
-                   particles_right, particles_disabled);
 
-    /* Send & Recv of Particles */
+    /* Simulate Particles */
+    timer.change(timestamp, Timer::Tag::Computation);
+    {
+      layer.simulate(dist, MCMPI_NB_STEPS_PER_CYCLE, particles_left,
+                     particles_right, particles_disabled);
+    }
+
+    /* Sending Particles */
+    timer.change(timestamp, Timer::Tag::Send);
     {
       if (world_rank == 0) {
 
@@ -49,16 +56,19 @@ void Worker::spin() {
         particle_comm.send(particles_right, world_rank + 1, MCMPI_PARTICLE_TAG);
         particles_right.clear();
       }
+    }
 
-      // receive
+    /* Receive Particles */
+    timer.change(timestamp, Timer::Tag::Recv);
+    {
+      // recv
       particle_comm.recv(layer.particles, MPI_ANY_SOURCE, MCMPI_PARTICLE_TAG);
     }
 
-    /* Send and recv of events */
+    /* Receive Events */
+    timer.change(timestamp, Timer::Tag::Recv);
     {
-
       if (world_rank == 0) {
-        // master
         vec_nb_particles_disabled[0] = particles_left.size();
 
         std::vector<int> tmp_vec;
@@ -77,23 +87,9 @@ void Worker::spin() {
 
         if (nb_total_disabled == options.nb_particles) {
           // end of simulation
-          for (int i = 1; i < options.world_size; ++i) {
-            event_comm.send(1, i, MCMPI_FINISHED_TAG);
-          }
           flag = false;
         }
-      }
-
-      if (world_rank > 0) {
-        // Send number of disabled particles to master (rank = 0)
-        int nb_particles_disabled = particles_disabled.size();
-        if (world_rank == options.world_size - 1) {
-          nb_particles_disabled += particles_right.size();
-        }
-        if (nb_particles_disabled > 0) {
-          event_comm.send(nb_particles_disabled, 0, MCMPI_NB_DISABLED_TAG);
-        }
-
+      } else {
         std::vector<int> finished_vec;
         if (event_comm.recv(finished_vec, 0, MCMPI_FINISHED_TAG)) {
           // end of simulation
@@ -102,19 +98,40 @@ void Worker::spin() {
       }
     }
 
-    // timing
-    finish = high_resolution_clock::now();
-    std::chrono::duration<double, std::milli> elapsed = finish - start;
+    /* Send Events */
+    timer.change(timestamp, Timer::Tag::Send);
+    {
+      if (world_rank == 0) {
+        if (!flag) {
+          for (int i = 1; i < options.world_size; ++i) {
+            event_comm.send(1, i, MCMPI_FINISHED_TAG);
+          }
+        }
+      } else {
+        int nb_particles_disabled = particles_disabled.size();
+        if (world_rank == options.world_size - 1) {
+          nb_particles_disabled += particles_right.size();
+        }
+        if (nb_particles_disabled > 0) {
+          event_comm.send(nb_particles_disabled, 0, MCMPI_NB_DISABLED_TAG);
+        }
+      }
+    }
 
-#ifndef NDEBUG
-    printf("[%3d/%3d]: n = %8zu, t = %f ms\n", world_rank, options.world_size,
-           layer.particles.size(), elapsed.count());
-#endif
-    if (elapsed.count() < MCMPI_WAIT_MS) {
-      std::this_thread::sleep_for(
-          std::chrono::duration<double, std::milli>(MCMPI_WAIT_MS) - elapsed);
+    /* Idle */
+    timer.change(timestamp, Timer::Tag::Idle);
+    {
+      finish = high_resolution_clock::now();
+      std::chrono::duration<double, std::milli> elapsed = finish - start;
+      if (elapsed.count() < MCMPI_WAIT_MS) {
+        std::this_thread::sleep_for(
+            std::chrono::duration<double, std::milli>(MCMPI_WAIT_MS) - elapsed);
+      }
     }
   }
+
+  timer.stop(timestamp);
+  return;
 }
 
 std::vector<real_t> Worker::weights_absorbed() {

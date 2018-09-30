@@ -7,13 +7,21 @@
 class Timer {
 public:
   typedef int id_t;
-  enum Tag : id_t { Computation = 0, Send, Receive, Idle, STATE_COUNT };
+  enum Tag : id_t {
+    Computation = 0,
+    Send,
+    Recv,
+    Idle,
+    STATE_COUNT,
+    NO_STATE = -1
+  };
   typedef struct timestamp_tag {
     Tag tag;
-    double starttime;
+    double time;
   } Timestamp;
 
-  const Timestamp start(Tag tag);
+  Timestamp start(Tag tag);
+  void change(Timestamp &timestamp, Tag tag);
   void stop(Timestamp timestamp);
   double tick();
 

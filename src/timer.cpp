@@ -1,11 +1,20 @@
 #include "timer.hpp"
 #include <mpi.h>
 
-const Timer::Timestamp Timer::start(Tag tag) { return {tag, MPI_Wtime()}; }
+Timer::Timestamp Timer::start(Tag tag) { return {tag, MPI_Wtime()}; }
+
+void Timer::change(Timestamp &timestamp, Tag tag) {
+  double time = MPI_Wtime();
+  cumm_times[timestamp.tag] += (time - timestamp.time);
+
+  // update timestamp
+  timestamp.tag = tag;
+  timestamp.time = time;
+}
 
 void Timer::stop(Timer::Timestamp timestamp) {
   double endtime = MPI_Wtime();
-  cumm_times[timestamp.tag] += (endtime - timestamp.starttime);
+  cumm_times[timestamp.tag] += (endtime - timestamp.time);
 }
 
 double Timer::tick() { return MPI_Wtick(); }

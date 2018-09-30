@@ -1,4 +1,5 @@
 #include "worker.hpp"
+#include <iostream>
 #include <mpi.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -52,13 +53,21 @@ int main(int argc, char **argv) {
 
   printf("Worker [%3d/%3d]: (%f, %f)\n", world_rank, world_size,
          worker.layer.x_min, worker.layer.x_max);
+  double starttime = MPI_Wtime();
   worker.spin();
+  double timespan = MPI_Wtime() - starttime;
 
   printf("Layer [%3d/%3d]: absorbed weight = (\n", world_rank, world_size);
   for (auto w : worker.weights_absorbed()) {
     printf("%f, ", w);
   }
   printf(")\n");
+
+  MPI_Barrier(MPI_COMM_WORLD);
+  usleep(10000 * world_rank);
+
+  std::cout << "p = " << world_rank << worker.timer
+            << ", t = " << timespan * 1000.0 << " ms, " << std::endl;
   MPI_Finalize();
   return 0;
 }
