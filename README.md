@@ -89,9 +89,8 @@ which generates the output
 Timer: (Computation=0.00309944 ms, Send=0 ms, Receive=0 ms, Idle=0 ms, Total=0.00309944 ms)
 The tick is 0.001 ms
 ```
-Calling `timer.start` with `const auto` return type is recommended. If timing overlaps, i.e. a second `timer.start` with the same `Timer::Tag` is called before the stop, then the overlapping part will be counted twice.
 
-The recommended way to utilize `Timer` is:
+The recommended way to utilize `Timer` for more complex scenarios is:
 ```cpp
 Timer timer;
 
@@ -106,7 +105,8 @@ timer.stop(timestamp);
 
 ```
 Because this way the sum of the computation time and send time will be equal to timing the both blocks together.
+
+
+
 ---
 The project can be opened with sublime text. A build system and settings for EasyClangComplete are set.
-
-
