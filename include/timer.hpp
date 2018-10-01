@@ -1,7 +1,12 @@
 #ifndef TIMER_HPP
 #define TIMER_HPP
 
+// I use the fact that structs with methods are still POD in memory which is
+// guranteed by the standard. See:
+// https://stackoverflow.com/questions/422830/structure-of-a-c-object-in-memory-vs-a-struct
+
 #include <iostream>
+#include <mpi.h>
 
 class Timer {
 public:
@@ -15,18 +20,24 @@ public:
     double cumm_times[Tag::STATE_COUNT] = {0.0};
     double starttime = 0.0;
     double endtime = 0.0;
+
+    static MPI_Datatype mpi_t();
   } State;
 
   Timestamp start(Tag tag);
   State restart(Timestamp &timestamp, Tag tag);
   void change(Timestamp &timestamp, Tag tag);
-  void stop(Timestamp timestamp);
+  State stop(Timestamp timestamp);
   void reset();
-  double tick();
+  double tick() const;
+  double time() const;
+
+  double starttime() const;
 
   friend std::ostream &operator<<(std::ostream &stream, const Timer &timer);
 
 private:
   State state;
 };
+
 #endif

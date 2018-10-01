@@ -11,12 +11,20 @@ Worker::Worker(int world_rank, const MCMPIOptions &options)
                              options.nb_cells_per_layer, options.nb_particles,
                              options.particle_min_weight)),
       particle_comm(world_rank, options.buffer_size) {
+
+  /* Commit Timer::State Type */
+  MPI_Datatype timer_state_mpi_type = Timer::State::mpi_t();
+  MPI_Type_commit(&timer_state_mpi_type);
+
   /* Event as int */
   event_comm.init(world_rank, MPI_INT, options.buffer_size);
 }
 
-void Worker::spin() {
+std::vector<Timer::State> Worker::spin() {
   using std::chrono::high_resolution_clock;
+
+  std::vector<Timer::State> timer_states;
+  timer_states.reserve(100);
 
   auto timestamp = timer.start(Timer::Tag::Idle);
 
@@ -123,6 +131,12 @@ void Worker::spin() {
       }
     }
 
+    /* Timer State */
+    if (timer.time() > timer.starttime() + options.statistics_cycle_time) {
+      // dump
+      timer_states.push_back(timer.restart(timestamp, Timer::Tag::Idle));
+    }
+
     /* Idle */
     timer.change(timestamp, Timer::Tag::Idle);
     {
@@ -137,8 +151,8 @@ void Worker::spin() {
     }
   }
 
-  timer.stop(timestamp);
-  return;
+  timer_states.push_back(timer.stop(timestamp));
+  return timer_states;
 }
 
 std::vector<real_t> Worker::weights_absorbed() {

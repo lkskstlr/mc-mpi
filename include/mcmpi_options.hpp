@@ -31,6 +31,9 @@ typedef struct mcmpi_options_tag {
   double cycle_time;  /** Each worker tries to complete one cycle in cycle time
                          seconds */
   int cycle_nb_steps; /** Number of particle_step calls per cycle */
+
+  double statistics_cycle_time; /** Each worker will dump statistics after this
+                                   cycle time*/
 } MCMPIOptions;
 
 #endif

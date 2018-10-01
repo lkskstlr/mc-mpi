@@ -1,9 +1,11 @@
 #include "mcmpi_options.hpp"
+#include "timer.hpp"
 #include "worker.hpp"
 #include <iostream>
 #include <mpi.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <vector>
 
 void parse_input(int argc, char **argv, int world_rank, size_t *nb_particles) {
   if (argc != 2 && world_rank == 0) {
@@ -29,6 +31,7 @@ int main(int argc, char **argv) {
   opt.nb_cells_per_layer = 2;
   opt.cycle_time = 1e-5;
   opt.cycle_nb_steps = 10000;
+  opt.statistics_cycle_time = opt.cycle_time * 10;
 
   // -- MPI Setup --
   MPI_Init(NULL, NULL);
@@ -46,10 +49,11 @@ int main(int argc, char **argv) {
   printf("Worker [%3d/%3d]: (%f, %f)\n", world_rank, world_size,
          worker.layer.x_min, worker.layer.x_max);
   double starttime = MPI_Wtime();
-  worker.spin();
+  std::vector<Timer::State> timer_states = worker.spin();
   double timespan = MPI_Wtime() - starttime;
 
-  printf("Layer [%3d/%3d]: absorbed weight = (\n", world_rank, world_size);
+  printf("Layer [%3d/%3d]: n_stats = %zu, absorbed weight = (\n", world_rank,
+         world_size, timer_states.size());
   for (auto w : worker.weights_absorbed()) {
     printf("%f, ", w);
   }

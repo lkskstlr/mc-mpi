@@ -34,7 +34,7 @@ public:
    * \brief Main function. Call spin() once in the main. The function will exit
    * once the simulation is over.
    */
-  void spin();
+  std::vector<Timer::State> spin();
 
   /*!
    * \function weights_absorbed
