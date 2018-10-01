@@ -34,7 +34,12 @@ public:
    * \brief Main function. Call spin() once in the main. The function will exit
    * once the simulation is over.
    */
-  std::vector<Timer::State> spin();
+  void spin();
+
+  /*!
+   * \function gather_timings
+   */
+  void gather_timings();
 
   /*!
    * \function weights_absorbed
@@ -56,5 +61,7 @@ public:
   AsyncComm<int> event_comm;
 
   Timer timer;
+  std::vector<Timer::State> timer_states;
+  MPI_Datatype timer_state_mpi_t;
 };
 #endif

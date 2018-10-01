@@ -12,19 +12,19 @@ Worker::Worker(int world_rank, const MCMPIOptions &options)
                              options.particle_min_weight)),
       particle_comm(world_rank, options.buffer_size) {
 
+  /* reserve */
+  timer_states.reserve(100);
+
   /* Commit Timer::State Type */
-  MPI_Datatype timer_state_mpi_type = Timer::State::mpi_t();
-  MPI_Type_commit(&timer_state_mpi_type);
+  timer_state_mpi_t = Timer::State::mpi_t();
+  MPI_Type_commit(&timer_state_mpi_t);
 
   /* Event as int */
   event_comm.init(world_rank, MPI_INT, options.buffer_size);
 }
 
-std::vector<Timer::State> Worker::spin() {
+void Worker::spin() {
   using std::chrono::high_resolution_clock;
-
-  std::vector<Timer::State> timer_states;
-  timer_states.reserve(100);
 
   auto timestamp = timer.start(Timer::Tag::Idle);
 
@@ -152,7 +152,55 @@ std::vector<Timer::State> Worker::spin() {
   }
 
   timer_states.push_back(timer.stop(timestamp));
-  return timer_states;
+  return;
+}
+
+void Worker::gather_timings() {
+  constexpr int root = 0;
+  int *recvcounts = NULL;
+
+  /* Only root has the received data */
+  if (world_rank == root) {
+    recvcounts = (int *)malloc(options.world_size * sizeof(int));
+  }
+
+  int my_len = static_cast<int>(timer_states.size());
+  MPI_Gather(&my_len, 1, MPI_INT, recvcounts, 1, MPI_INT, root, MPI_COMM_WORLD);
+
+  int total_len = 0;
+  int *displs = NULL;
+  Timer::State *total_states = NULL;
+
+  if (world_rank == root) {
+    displs = (int *)malloc(options.world_size * sizeof(int));
+
+    displs[0] = 0;
+    total_len += recvcounts[0];
+
+    for (int i = 1; i < options.world_size; i++) {
+      total_len += recvcounts[i];
+      displs[i] = displs[i - 1] + recvcounts[i - 1];
+    }
+
+    /* allocate */
+    total_states = (Timer::State *)malloc(total_len * sizeof(Timer::State));
+  }
+
+  /*
+   * Now we have the receive buffer, counts, and displacements, and
+   * can gather the strings
+   */
+
+  MPI_Gatherv(timer_states.data(), my_len, timer_state_mpi_t, total_states,
+              recvcounts, displs, timer_state_mpi_t, root, MPI_COMM_WORLD);
+
+  if (world_rank == root) {
+
+    for (int i = 0; i < total_len; ++i) {
+      printf("%f, ", total_states[i].starttime);
+    }
+    printf("\n");
+  }
 }
 
 std::vector<real_t> Worker::weights_absorbed() {

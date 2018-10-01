@@ -49,11 +49,10 @@ int main(int argc, char **argv) {
   printf("Worker [%3d/%3d]: (%f, %f)\n", world_rank, world_size,
          worker.layer.x_min, worker.layer.x_max);
   double starttime = MPI_Wtime();
-  std::vector<Timer::State> timer_states = worker.spin();
+  worker.spin();
   double timespan = MPI_Wtime() - starttime;
 
-  printf("Layer [%3d/%3d]: n_stats = %zu, absorbed weight = (\n", world_rank,
-         world_size, timer_states.size());
+  printf("Layer [%3d/%3d]: absorbed weight = (\n", world_rank, world_size);
   for (auto w : worker.weights_absorbed()) {
     printf("%f, ", w);
   }
@@ -64,6 +63,8 @@ int main(int argc, char **argv) {
 
   std::cout << "p = " << world_rank << ": " << worker.timer
             << ", t = " << timespan * 1000.0 << " ms, " << std::endl;
+
+  worker.gather_timings();
 
   MPI_Finalize();
   return 0;
