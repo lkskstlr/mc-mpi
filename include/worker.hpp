@@ -2,40 +2,12 @@
 #define WORKER_HPP
 
 #include "layer.hpp"
+#include "mcmpi_options.hpp"
+#include "particle.hpp"
 #include "particle_comm.hpp"
 #include "random.hpp"
 #include "timer.hpp"
 #include "types.hpp"
-
-#define MCMPI_PARTICLE_TAG 1
-#define MCMPI_NB_DISABLED_TAG 2
-#define MCMPI_FINISHED_TAG 3
-
-#ifndef NDEBUG
-#define MCMPI_WAIT_MS 1000
-#define MCMPI_NB_STEPS_PER_CYCLE 1
-#else
-#define MCMPI_WAIT_MS 1
-#define MCMPI_NB_STEPS_PER_CYCLE 10000
-#endif
-
-/*!
- * \struct McOptions
- *
- * \brief Options for the Monte Carlo Simulation
- */
-typedef struct mc_options_tag {
-  int world_size;         /** number of processes/layers in the simulation */
-  int nb_cells_per_layer; /** number of cells in each layer */
-  real_t x_min, x_max,
-      x_ini; /** x_min, x_max and x_ini of the global simulation */
-
-  real_t particle_min_weight; /** If weight < ... the particle is disabled */
-
-  std::size_t buffer_size;  /** buffer size in bytes of the async_comm send
-                               buffer. Higher is better, e.g. 1024*1024 */
-  std::size_t nb_particles; /** total number of particles in the simulation */
-} McOptions;
 
 /*!
  * \class Worker
@@ -52,9 +24,9 @@ public:
    * \brief Constructor
    *
    * \param[in] world_rank mpi world_rank of the processor
-   * \param[in] McOptions global options
+   * \param[in] MCMPIOptions global options
    */
-  Worker(int world_rank, const McOptions &McOptions);
+  Worker(int world_rank, const MCMPIOptions &options);
 
   /*!
    * \function spin
@@ -76,7 +48,7 @@ public:
 
   // private:
   const int world_rank;
-  const McOptions options;
+  const MCMPIOptions options;
   UnifDist dist;
   Layer layer;
   ParticleComm particle_comm;

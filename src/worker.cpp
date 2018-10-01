@@ -4,7 +4,7 @@
 
 using std::size_t;
 
-Worker::Worker(int world_rank, const McOptions &options)
+Worker::Worker(int world_rank, const MCMPIOptions &options)
     : world_rank(world_rank), options(options), dist(SOME_SEED + world_rank),
       layer(decompose_domain(dist, options.x_min, options.x_max, options.x_ini,
                              options.world_size, world_rank,
@@ -34,7 +34,7 @@ void Worker::spin() {
     /* Simulate Particles */
     timer.change(timestamp, Timer::Tag::Computation);
     {
-      layer.simulate(dist, MCMPI_NB_STEPS_PER_CYCLE, particles_left,
+      layer.simulate(dist, options.cycle_nb_steps, particles_left,
                      particles_right, particles_disabled);
     }
 
@@ -43,17 +43,21 @@ void Worker::spin() {
     {
       if (world_rank == 0) {
 
-        particle_comm.send(particles_right, world_rank + 1, MCMPI_PARTICLE_TAG);
+        particle_comm.send(particles_right, world_rank + 1,
+                           MCMPIOptions::Tag::Particle);
         particles_right.clear();
       } else if (world_rank == options.world_size - 1) {
 
-        particle_comm.send(particles_left, world_rank - 1, MCMPI_PARTICLE_TAG);
+        particle_comm.send(particles_left, world_rank - 1,
+                           MCMPIOptions::Tag::Particle);
         particles_left.clear();
       } else {
 
-        particle_comm.send(particles_left, world_rank - 1, MCMPI_PARTICLE_TAG);
+        particle_comm.send(particles_left, world_rank - 1,
+                           MCMPIOptions::Tag::Particle);
         particles_left.clear();
-        particle_comm.send(particles_right, world_rank + 1, MCMPI_PARTICLE_TAG);
+        particle_comm.send(particles_right, world_rank + 1,
+                           MCMPIOptions::Tag::Particle);
         particles_right.clear();
       }
     }
@@ -62,7 +66,8 @@ void Worker::spin() {
     timer.change(timestamp, Timer::Tag::Recv);
     {
       // recv
-      particle_comm.recv(layer.particles, MPI_ANY_SOURCE, MCMPI_PARTICLE_TAG);
+      particle_comm.recv(layer.particles, MPI_ANY_SOURCE,
+                         MCMPIOptions::Tag::Particle);
     }
 
     /* Receive Events */
@@ -74,7 +79,7 @@ void Worker::spin() {
         std::vector<int> tmp_vec;
         for (int source = 1; source < options.world_size; ++source) {
           tmp_vec.clear();
-          if (event_comm.recv(tmp_vec, source, MCMPI_NB_DISABLED_TAG) &&
+          if (event_comm.recv(tmp_vec, source, MCMPIOptions::Tag::Disable) &&
               !tmp_vec.empty()) {
             vec_nb_particles_disabled[source] = tmp_vec[0];
           }
@@ -91,7 +96,7 @@ void Worker::spin() {
         }
       } else {
         std::vector<int> finished_vec;
-        if (event_comm.recv(finished_vec, 0, MCMPI_FINISHED_TAG)) {
+        if (event_comm.recv(finished_vec, 0, MCMPIOptions::Tag::Finish)) {
           // end of simulation
           flag = false;
         }
@@ -104,7 +109,7 @@ void Worker::spin() {
       if (world_rank == 0) {
         if (!flag) {
           for (int i = 1; i < options.world_size; ++i) {
-            event_comm.send(1, i, MCMPI_FINISHED_TAG);
+            event_comm.send(1, i, MCMPIOptions::Tag::Finish);
           }
         }
       } else {
@@ -113,7 +118,7 @@ void Worker::spin() {
           nb_particles_disabled += particles_right.size();
         }
         if (nb_particles_disabled > 0) {
-          event_comm.send(nb_particles_disabled, 0, MCMPI_NB_DISABLED_TAG);
+          event_comm.send(nb_particles_disabled, 0, MCMPIOptions::Tag::Disable);
         }
       }
     }
@@ -123,9 +128,11 @@ void Worker::spin() {
     {
       finish = high_resolution_clock::now();
       std::chrono::duration<double, std::milli> elapsed = finish - start;
-      if (elapsed.count() < MCMPI_WAIT_MS) {
-        std::this_thread::sleep_for(
-            std::chrono::duration<double, std::milli>(MCMPI_WAIT_MS) - elapsed);
+      if (elapsed.count() < options.cycle_time * 1e3) {
+        auto sleep_length = std::chrono::duration<double, std::milli>(
+                                options.cycle_time * 1e3) -
+                            elapsed;
+        std::this_thread::sleep_for(sleep_length);
       }
     }
   }

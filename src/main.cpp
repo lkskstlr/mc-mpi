@@ -1,3 +1,4 @@
+#include "mcmpi_options.hpp"
 #include "worker.hpp"
 #include <iostream>
 #include <mpi.h>
@@ -20,12 +21,14 @@ void parse_input(int argc, char **argv, int world_rank, size_t *nb_particles) {
 
 int main(int argc, char **argv) {
   // constants
-  McOptions opt;
+  MCMPIOptions opt;
   opt.x_min = 0.0;
   opt.x_max = 1.0;
   opt.x_ini = sqrt(2.) / 2;
   opt.buffer_size = pow(2, 24);
   opt.nb_cells_per_layer = 2;
+  opt.cycle_time = 1e-5;
+  opt.cycle_nb_steps = 10000;
 
   // -- MPI Setup --
   MPI_Init(NULL, NULL);
@@ -37,17 +40,6 @@ int main(int argc, char **argv) {
 
   // parse input
   parse_input(argc, argv, world_rank, &(opt.nb_particles));
-
-  {
-    int i = 0;
-    char hostname[256];
-    gethostname(hostname, sizeof(hostname));
-    printf("PID %d on %s ready for attach\n", getpid(), hostname);
-    fflush(stdout);
-    // while (0 == i) {
-    //   sleep(5);
-    // }
-  }
 
   Worker worker(world_rank, opt);
 
@@ -66,7 +58,7 @@ int main(int argc, char **argv) {
   MPI_Barrier(MPI_COMM_WORLD);
   usleep(10000 * world_rank);
 
-  std::cout << "p = " << world_rank << worker.timer
+  std::cout << "p = " << world_rank << ": " << worker.timer
             << ", t = " << timespan * 1000.0 << " ms, " << std::endl;
 
   MPI_Finalize();

@@ -1,6 +1,7 @@
 #ifndef GEOMETRY_HPP
 #define GEOMETRY_HPP
 
+#include "particle.hpp"
 #include "random.hpp"
 #include "types.hpp"
 #include <vector>

@@ -2,7 +2,7 @@
 #define PARTICLE_COMM
 
 #include "async_comm.hpp"
-#include "types.hpp"
+#include "particle.hpp"
 
 class ParticleComm : public AsyncComm<Particle> {
 public:

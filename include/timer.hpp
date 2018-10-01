@@ -2,19 +2,11 @@
 #define TIMER_HPP
 
 #include <iostream>
-#include <string>
 
 class Timer {
 public:
   typedef int id_t;
-  enum Tag : id_t {
-    Computation = 0,
-    Send,
-    Recv,
-    Idle,
-    STATE_COUNT,
-    NO_STATE = -1
-  };
+  enum Tag : id_t { Computation = 0, Send, Recv, Idle, STATE_COUNT };
   typedef struct timestamp_tag {
     Tag tag;
     double time;

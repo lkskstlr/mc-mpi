@@ -3,10 +3,11 @@
 template <typename T>
 void AsyncComm<T>::init(int world_rank, MPI_Datatype const mpi_t,
                         std::size_t max_buffer_size) {
+  constexpr int send_info_initial_reserve = 256;
   this->world_rank = world_rank;
   this->mpi_t = mpi_t;
   this->max_buffer_size = max_buffer_size;
-  send_infos.reserve(SEND_INFO_INITIAL_RESERVE);
+  send_infos.reserve(send_info_initial_reserve);
 }
 
 template <typename T>

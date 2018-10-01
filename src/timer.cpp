@@ -1,5 +1,6 @@
 #include "timer.hpp"
 #include <mpi.h>
+#include <string>
 
 Timer::Timestamp Timer::start(Tag tag) { return {tag, MPI_Wtime()}; }
 

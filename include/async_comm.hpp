@@ -5,8 +5,6 @@
 #include <stdio.h>
 #include <vector>
 
-#define SEND_INFO_INITIAL_RESERVE 256
-
 template <typename T> class AsyncComm {
 
   /* Only needed inside class */

@@ -1,10 +1,6 @@
 #include "layer.hpp"
 #include <cmath>
 
-#ifndef VECTOR_RESERVE
-#define VECTOR_RESERVE 10000
-#endif
-
 Layer decompose_domain(UnifDist &dist, real_t x_min, real_t x_max, real_t x_ini,
                        int world_size, int world_rank, int cells_per_layer,
                        int nb_particles, real_t particle_min_weight) {
@@ -25,6 +21,7 @@ Layer::Layer(real_t x_min, real_t x_max, int index_start, int m,
              real_t particle_min_weight)
     : x_min(x_min), x_max(x_max), m(m), index_start(index_start),
       dx((x_max - x_min) / m), particle_min_weight(particle_min_weight) {
+  constexpr int vector_reserve = 10000;
 
   // sigs
   sigs.reserve(m);
@@ -40,7 +37,7 @@ Layer::Layer(real_t x_min, real_t x_max, int index_start, int m,
   // weights absorbed
   weights_absorbed = std::vector<real_t>(m, 0.0);
 
-  particles.reserve(VECTOR_RESERVE);
+  particles.reserve(vector_reserve);
 }
 
 void Layer::create_particles(UnifDist &dist, real_t x_ini, real_t wmc, int n) {
