@@ -194,12 +194,26 @@ void Worker::gather_timings() {
   MPI_Gatherv(timer_states.data(), my_len, timer_state_mpi_t, total_states,
               recvcounts, displs, timer_state_mpi_t, root, MPI_COMM_WORLD);
 
-  if (world_rank == root) {
+  if (world_rank == 0) {
+    static FILE *file;
+    file = fopen("time.csv", "wb");
 
+    fprintf(file, "proc, starttime, endtime, state_comp, state_send, "
+                  "state_recv, state_idle\n");
+    int proc = 0;
     for (int i = 0; i < total_len; ++i) {
-      printf("%f, ", total_states[i].starttime);
+      if (proc < options.world_size - 1 && displs[proc + 1] == i) {
+        proc++;
+      }
+      fprintf(file, "%d, %.18e, %.18e, %.18e, %.18e, %.18e, %.18e\n", proc,
+              total_states[i].starttime, total_states[i].endtime,
+              total_states[i].cumm_times[Timer::Tag::Computation],
+              total_states[i].cumm_times[Timer::Tag::Send],
+              total_states[i].cumm_times[Timer::Tag::Recv],
+              total_states[i].cumm_times[Timer::Tag::Idle]);
     }
-    printf("\n");
+
+    fclose(file);
   }
 }
 

@@ -11,3 +11,9 @@ toy_examples/logging2
 toy_examples/logging3
 toy_examples/mpi_test
 toy_examples/timing
+tex/build/
+__pycache__/
+tex/__pycache__/
+.ipynb_checkpoints/
+tex/.ipynb_checkpoints
+saved_runs

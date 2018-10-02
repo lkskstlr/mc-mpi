@@ -29,9 +29,9 @@ int main(int argc, char **argv) {
   opt.x_ini = sqrt(2.) / 2;
   opt.buffer_size = pow(2, 24);
   opt.nb_cells_per_layer = 2;
-  opt.cycle_time = 1e-5;
+  opt.cycle_time = 1e-3;
   opt.cycle_nb_steps = 10000;
-  opt.statistics_cycle_time = opt.cycle_time * 10;
+  opt.statistics_cycle_time = 0.75 * opt.cycle_time;
 
   // -- MPI Setup --
   MPI_Init(NULL, NULL);

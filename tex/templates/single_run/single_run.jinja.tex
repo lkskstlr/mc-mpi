@@ -1,0 +1,32 @@
+\documentclass[10pt]{article}
+
+\input{packages.tex}
+\input{commands.tex}
+\input{header.tex}
+
+\usepackage{titlesec}
+\usepackage{csquotes}
+\usepackage{subcaption}
+\usepackage[style=numeric,backend=biber]{biblatex}
+
+\titleformat*{\section}{\large\bfseries}
+\titleformat*{\subsection}{\bfseries}
+
+\begin{document}
+\header{}
+\vskip 12pt
+
+\begin{center}
+\Large\textbf{Single Run Report}
+\end{center}
+
+The runtime was \VAR{length}.
+
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\textwidth]{fig01.png}
+    \caption{Runtime Analysis.}
+\end{figure} 
+
+\end{document}
