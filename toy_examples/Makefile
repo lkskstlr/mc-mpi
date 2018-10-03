@@ -2,7 +2,9 @@ CC=mpicc
 CXX=mpicxx
 CFLAGS=-I../include/ -O3
 
-all:mpi_test logging logging2 logging3 timing assert_debug assert_release hash array_in_struct
+BINS=mpi_test logging logging2 logging3 timing assert_debug assert_release hash array_in_struct load_double
+
+all:$(BINS)
 
 .PHONY: test
 test: test_logging
@@ -11,6 +13,9 @@ test: test_logging
 test_logging: logging2 logging3
 	./test_logging
 
+load_double: load_double.cpp
+	$(CXX) $(CFLAGS) -std=c++17 -o $@ $^
+	
 array_in_struct: array_in_struct.cpp
 	$(CC) $(CFLAGS) -o $@ $^
 
@@ -40,5 +45,6 @@ logging3: logging3.c
 
 .PHONY: clean
 clean:
-	rm -f mpi_test timing logging logging2 logging3 logs/* assert_debug assert_release hash array_in_struct
+	rm -f $(BINS)
+	rm -rf logs/*
 	rm -rf assert_debug.dSYM

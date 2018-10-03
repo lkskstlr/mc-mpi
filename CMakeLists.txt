@@ -32,6 +32,17 @@ IF(DEBUG_VERBOSE)
     ADD_DEFINITIONS(-DMCMPI_LOG_VERBOSE)
 ENDIF(DEBUG_VERBOSE)
 
+add_library(yaml SHARED
+    src/yaml_loader.cpp
+    src/yaml_dumper.cpp
+)
+target_include_directories(yaml PUBLIC include)
+set_target_properties(yaml PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED YES
+    CXX_EXTENSIONS NO
+)
+
 add_library(libmc-base SHARED
     src/random.cpp
     src/layer.cpp
@@ -56,6 +67,7 @@ set_target_properties(libmc-mpi PROPERTIES
     CXX_EXTENSIONS NO
 )
 target_link_libraries(libmc-mpi
+  yaml
   libmc-base
 )
 

@@ -1,6 +1,11 @@
 #include "worker.hpp"
+#include "yaml_dumper.hpp"
 #include <chrono>
+#include <dirent.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <thread>
+#include <unistd.h>
 
 using std::size_t;
 
@@ -155,68 +160,130 @@ void Worker::spin() {
   return;
 }
 
-void Worker::gather_timings() {
-  constexpr int root = 0;
+void Worker::dump() {
+  int total_len = 0;
+  int *displs = NULL;
+  Timer::State *states = NULL;
+
+  gather_times(&total_len, &displs, &states);
+
+  if (world_rank == 0) {
+    mkdir_out();
+
+    dump_config();
+    dump_times(total_len, displs, states);
+  }
+
+  free(displs);
+  free(states);
+}
+
+void Worker::gather_times(int *total_len, int **displs, Timer::State **states) {
   int *recvcounts = NULL;
 
-  /* Only root has the received data */
-  if (world_rank == root) {
+  if (world_rank == 0) {
     recvcounts = (int *)malloc(options.world_size * sizeof(int));
   }
 
   int my_len = static_cast<int>(timer_states.size());
-  MPI_Gather(&my_len, 1, MPI_INT, recvcounts, 1, MPI_INT, root, MPI_COMM_WORLD);
+  MPI_Gather(&my_len, 1, MPI_INT, recvcounts, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
-  int total_len = 0;
-  int *displs = NULL;
-  Timer::State *total_states = NULL;
-
-  if (world_rank == root) {
-    displs = (int *)malloc(options.world_size * sizeof(int));
-
-    displs[0] = 0;
-    total_len += recvcounts[0];
-
-    for (int i = 1; i < options.world_size; i++) {
-      total_len += recvcounts[i];
-      displs[i] = displs[i - 1] + recvcounts[i - 1];
-    }
-
-    /* allocate */
-    total_states = (Timer::State *)malloc(total_len * sizeof(Timer::State));
-  }
-
-  /*
-   * Now we have the receive buffer, counts, and displacements, and
-   * can gather the strings
-   */
-
-  MPI_Gatherv(timer_states.data(), my_len, timer_state_mpi_t, total_states,
-              recvcounts, displs, timer_state_mpi_t, root, MPI_COMM_WORLD);
+  *total_len = 0;
 
   if (world_rank == 0) {
-    static FILE *file;
-    file = fopen("time.csv", "wb");
+    *displs = (int *)malloc(options.world_size * sizeof(int));
 
-    fprintf(file, "proc, starttime, endtime, state_comp, state_send, "
-                  "state_recv, state_idle\n");
-    int proc = 0;
-    for (int i = 0; i < total_len; ++i) {
-      if (proc < options.world_size - 1 && displs[proc + 1] == i) {
-        proc++;
-      }
-      fprintf(file, "%d, %.18e, %.18e, %.18e, %.18e, %.18e, %.18e\n", proc,
-              total_states[i].starttime, total_states[i].endtime,
-              total_states[i].cumm_times[Timer::Tag::Computation],
-              total_states[i].cumm_times[Timer::Tag::Send],
-              total_states[i].cumm_times[Timer::Tag::Recv],
-              total_states[i].cumm_times[Timer::Tag::Idle]);
+    (*displs)[0] = 0;
+    *total_len += recvcounts[0];
+
+    for (int i = 1; i < options.world_size; i++) {
+      *total_len += recvcounts[i];
+      (*displs)[i] = (*displs)[i - 1] + recvcounts[i - 1];
     }
 
-    fclose(file);
+    *states = (Timer::State *)malloc((*total_len) * sizeof(Timer::State));
   }
+
+  MPI_Gatherv(timer_states.data(), my_len, timer_state_mpi_t, *states,
+              recvcounts, *displs, timer_state_mpi_t, 0, MPI_COMM_WORLD);
+}
+
+void Worker::dump_config() {
+  YamlDumper yaml_dumper("out/config.yaml");
+  yaml_dumper.dump_int("world_size", options.world_size);
+  yaml_dumper.dump_int("nb_cells_per_layer", options.nb_cells_per_layer);
+  yaml_dumper.dump_int("nb_particles", options.nb_particles);
+  yaml_dumper.dump_int("buffer_size", options.buffer_size);
+  yaml_dumper.dump_int("cycle_nb_steps", options.cycle_nb_steps);
+  yaml_dumper.dump_double("x_min", options.x_min);
+  yaml_dumper.dump_double("x_max", options.x_max);
+  yaml_dumper.dump_double("x_ini", options.x_ini);
+  yaml_dumper.dump_double("cycle_time", options.cycle_time);
+  yaml_dumper.dump_double("statistics_cycle_time",
+                          options.statistics_cycle_time);
 }
 
 std::vector<real_t> Worker::weights_absorbed() {
   return layer.weights_absorbed;
+}
+
+void Worker::mkdir_out() {
+  char filename[100] = "out/times.csv";
+  if (access(filename, F_OK) != -1) {
+    if (remove(filename)) {
+      fprintf(stderr, "Couldn't remove '%s'\n", filename);
+      exit(1);
+    }
+  }
+
+  strncpy(filename, "out/config.yaml", 100);
+  if (access(filename, F_OK) != -1) {
+    if (remove(filename)) {
+      fprintf(stderr, "Couldn't remove '%s'\n", filename);
+      exit(1);
+    }
+  }
+
+  DIR *dir = opendir("out");
+  if (dir) {
+    closedir(dir);
+    if (remove("out")) {
+      fprintf(stderr, "Couldn't remove out dir, is it empty?\n");
+      exit(1);
+    }
+  } else if (ENOENT == errno) {
+    /* Directory does not exist. */
+  } else {
+    fprintf(stderr, "opendir failed.\n");
+    exit(1);
+  }
+
+  mkdir("out", S_IRWXU | S_IRWXG | S_IRWXO);
+}
+
+void Worker::dump_times(int total_len, int const *displs,
+                        Timer::State const *states) {
+  FILE *file;
+  file = fopen("out/times.csv", "w");
+  if (!file) {
+    fprintf(stderr, "Couldn't open file out/times.csv for writing.\n");
+    exit(1);
+  }
+
+  fprintf(file, "proc, starttime, endtime, state_comp, state_send, "
+                "state_recv, state_idle\n");
+  int proc = 0;
+  for (int i = 0; i < total_len; ++i) {
+    if (proc < options.world_size - 1 && displs[proc + 1] == i) {
+      proc++;
+    }
+    fprintf(file, "%d, %.18e, %.18e, %.18e, %.18e, %.18e, %.18e\n", proc,
+            states[i].starttime, states[i].endtime,
+            states[i].cumm_times[Timer::Tag::Computation],
+            states[i].cumm_times[Timer::Tag::Send],
+            states[i].cumm_times[Timer::Tag::Recv],
+            states[i].cumm_times[Timer::Tag::Idle]);
+  }
+
+  fclose(file);
 }

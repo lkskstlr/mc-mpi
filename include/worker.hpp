@@ -37,9 +37,11 @@ public:
   void spin();
 
   /*!
-   * \function gather_timings
+   * \function dump
+   *
+   * \brief Creates folder out and dumps times.csv and config.yaml there.
    */
-  void gather_timings();
+  void dump();
 
   /*!
    * \function weights_absorbed
@@ -63,5 +65,12 @@ public:
   Timer timer;
   std::vector<Timer::State> timer_states;
   MPI_Datatype timer_state_mpi_t;
+
+private:
+  void gather_times(int *total_len, int **displs, Timer::State **states);
+  void mkdir_out();
+  void dump_config();
+  void dump_times(int total_len, int const *displs, Timer::State const *states);
 };
+
 #endif
