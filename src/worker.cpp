@@ -1,7 +1,9 @@
 #include "worker.hpp"
 #include "yaml_dumper.hpp"
+#include "yaml_loader.hpp"
 #include <chrono>
 #include <dirent.h>
+#include <stdio.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <thread>
@@ -17,6 +19,7 @@ Worker::Worker(int world_rank, const MCMPIOptions &options)
                              options.particle_min_weight)),
       particle_comm(world_rank, options.buffer_size) {
 
+  printf("statistics_cycle_time = %.18e\n", options.statistics_cycle_time);
   /* reserve */
   timer_states.reserve(100);
 
@@ -210,17 +213,18 @@ void Worker::gather_times(int *total_len, int **displs, Timer::State **states) {
 
 void Worker::dump_config() {
   YamlDumper yaml_dumper("out/config.yaml");
-  yaml_dumper.dump_int("world_size", options.world_size);
   yaml_dumper.dump_int("nb_cells_per_layer", options.nb_cells_per_layer);
-  yaml_dumper.dump_int("nb_particles", options.nb_particles);
-  yaml_dumper.dump_int("buffer_size", options.buffer_size);
-  yaml_dumper.dump_int("cycle_nb_steps", options.cycle_nb_steps);
   yaml_dumper.dump_double("x_min", options.x_min);
   yaml_dumper.dump_double("x_max", options.x_max);
   yaml_dumper.dump_double("x_ini", options.x_ini);
+  yaml_dumper.dump_double("particle_min_weight", options.particle_min_weight);
+  yaml_dumper.dump_int("nb_particles", options.nb_particles);
+  yaml_dumper.dump_int("buffer_size", options.buffer_size);
   yaml_dumper.dump_double("cycle_time", options.cycle_time);
+  yaml_dumper.dump_int("cycle_nb_steps", options.cycle_nb_steps);
   yaml_dumper.dump_double("statistics_cycle_time",
                           options.statistics_cycle_time);
+  yaml_dumper.dump_int("world_size", options.world_size);
 }
 
 std::vector<real_t> Worker::weights_absorbed() {
@@ -286,4 +290,26 @@ void Worker::dump_times(int total_len, int const *displs,
   }
 
   fclose(file);
+}
+
+Worker worker_from_config(std::string filepath, int world_size,
+                          int world_rank) {
+  YamlLoader yaml_loader(filepath);
+  // // constants
+  MCMPIOptions opt;
+  opt.world_size = world_size;
+  opt.nb_cells_per_layer = yaml_loader.load_int("nb_cells_per_layer");
+  opt.x_min = yaml_loader.load_double("x_min");
+  opt.x_max = yaml_loader.load_double("x_max");
+  opt.x_ini = yaml_loader.load_double("x_ini");
+  opt.particle_min_weight = yaml_loader.load_double("particle_min_weight");
+  opt.nb_particles = yaml_loader.load_int("nb_particles");
+  opt.buffer_size = yaml_loader.load_int("buffer_size");
+  opt.cycle_time = yaml_loader.load_double("cycle_time");
+  opt.cycle_nb_steps = yaml_loader.load_int("cycle_nb_steps");
+  opt.statistics_cycle_time = yaml_loader.load_double("statistics_cycle_time");
+
+  printf("loader: statistics_cycle_time = %.18e\n", opt.statistics_cycle_time);
+
+  return Worker(world_rank, opt);
 }

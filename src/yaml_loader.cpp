@@ -15,7 +15,9 @@ YamlLoader::YamlLoader(std::string filepath) {
 
   while ((read = getline(&line, &len, fp)) != -1) {
     std::string s(line);
-    s = s.substr(0, s.length() - 1);
+    if (s.back() == '\n') {
+      s = s.substr(0, s.length() - 1);
+    }
     int n = s.find(":");
     if (n == std::string::npos) {
       fprintf(stderr, "Yaml File %s was not correctly formatted.\n",

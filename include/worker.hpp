@@ -8,6 +8,7 @@
 #include "random.hpp"
 #include "timer.hpp"
 #include "types.hpp"
+#include <string>
 
 /*!
  * \class Worker
@@ -72,5 +73,7 @@ private:
   void dump_config();
   void dump_times(int total_len, int const *displs, Timer::State const *states);
 };
+
+Worker worker_from_config(std::string filepath, int world_size, int world_rank);
 
 #endif
