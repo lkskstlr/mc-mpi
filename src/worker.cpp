@@ -3,7 +3,6 @@
 #include "yaml_loader.hpp"
 #include <chrono>
 #include <dirent.h>
-#include <stdio.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <thread>
@@ -19,7 +18,6 @@ Worker::Worker(int world_rank, const MCMPIOptions &options)
                              options.particle_min_weight)),
       particle_comm(world_rank, options.buffer_size) {
 
-  printf("statistics_cycle_time = %.18e\n", options.statistics_cycle_time);
   /* reserve */
   timer_states.reserve(100);
 
@@ -308,8 +306,6 @@ Worker worker_from_config(std::string filepath, int world_size,
   opt.cycle_time = yaml_loader.load_double("cycle_time");
   opt.cycle_nb_steps = yaml_loader.load_int("cycle_nb_steps");
   opt.statistics_cycle_time = yaml_loader.load_double("statistics_cycle_time");
-
-  printf("loader: statistics_cycle_time = %.18e\n", opt.statistics_cycle_time);
 
   return Worker(world_rank, opt);
 }
