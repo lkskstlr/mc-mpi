@@ -107,6 +107,7 @@ timer.stop(timestamp);
 Because this way the sum of the computation time and send time will be equal to timing the both blocks together.
 
 
+## Report Generation
 
 ---
 The project can be opened with sublime text. A build system and settings for EasyClangComplete are set.

@@ -59,6 +59,9 @@ target_link_libraries(libmc-mpi
   libmc-base
 )
 
+# Scripts
+configure_file(scripts/save_run save_run COPYONLY)
+
 
 # Main
 add_executable(main src/main.cpp)
