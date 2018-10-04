@@ -1,6 +1,8 @@
 #!/bin/bash
 
 date_str="`date "+%Y-%m-%d_%H-%M-%S"`";
+mkdir -p ../saved_runs
+
 echo -n "Making tarball "
 tar -czf "../saved_runs/$date_str.tar.gz" out
 echo "done"

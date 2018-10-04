@@ -7,11 +7,15 @@ git clone https://github.com/lkskstlr/mc-mpi.git
 cd mc-mpi
 export CXX=mpicxx
 mkdir build; cd build; cmake .. -DCMAKE_BUILD_TYPE=Release; make;
-mpirun -n 5 ./main 1000000
-cd ..; ./test
+mpirun -n 5 ./main ../config.yaml
 ```
-The third line *sets the CXX environment variable* to an mpi compatible compiler. The one but last line runs on 5 processors with 1000000 particles. The last line runs the unit [tests](#tests).
+The third line *sets the CXX environment variable* to an mpi compatible compiler. The one but last line runs on 5 processes with parameters specified in `config.yaml`.
 
+The results will be saved in `build/out` which should not be touched by the user. If you want to save this specific run, call `./save_run` from the build directory and the run will be saved to `../saved_runs/<timestamp>.tar.gz`. Also the `latest` symlink in `saved_runs` will be set for convenience.
+
+
+## Reports
+After a run you can generate a report by `cd tex` (from base directory) and calling `./report single_run ../saved_runs/latest` which will generate the report PDF in `tex/build/single_run.pdf`. The `report` script needs the python dependencies in `tex/requirements.txt`. There is a bug in/with matplotlib 3.0.0 so version 2.2.2 is recommended.
 
 ## Tests
 A minimal testing script can be found in `test` and can be called by `./test`. A possible output is
@@ -33,10 +37,9 @@ i.e. one indented line per test. If it says ERROR (or abort or an error message)
 ### Classes
 | Class         | Header | @brief      |
 |---------------|--------|-------------|
-| Partcile etc. |types.hpp  | `real_t` and the `Particle` struct. |
 | UnifDist      |random.hpp | Uniform (0,1] distribution based on mersenne twister. |
-| Layer         |layer.hpp  | Representing one cell/layer in the simulation. Physics are implemented here. |
-| Worker        |worker.hpp | Manages the control flow of one mpi process. Has members of type `UnifDist`, `Layer`and `AsyncComm`. Each process instantiates exactly one worker. |
+| Layer         |layer.hpp  | Representing one layer which has multiple cells in the simulation. Physics are implemented here. |
+| Worker        |worker.hpp | Manages the control flow of one mpi process. Has members of type  `Layer`and `AsyncComm`. Each process instantiates exactly one worker. |
 | AsyncComm&lt;T&gt; |async_comm.hpp| Encapsulation of asynchronous, buffered mpi communication. Internally handles all buffering. Templated. |
 
 ### MPI Strategy
@@ -47,28 +50,8 @@ simulate -> send -> receive -> receive events -> simulate -> ...
 The `send`, `receive` and `receive events` return immediately. The events are the communication between master and all other nodes, to determine if the simulation is over.
 
 ### Settings
-There are different settings that influence behavior. The most important ones are in:
-  + `worker.hpp` C-style defines
-  + `main.cpp` Settings
+All settings are passed via specifying a `config.yaml` and passing its filepath as the single argument to `main` as shown in Build & Run.
 
-
-### Logging
-A minimal logging implementation can be found in `include/logging.h`. The basic usage is as follows:
-```cpp
-MPI_Init(NULL, NULL);
-int world_size, world_rank;
-
-MPI_Comm_size(MPI_COMM_WORLD, &world_size);
-MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
-
-MCMPI_DEBUG_INIT(world_rank)
-MCMPI_DEBUG("My world rank is %d", world_rank)
-
-MCMPI_DEBUG_STOP()
-MPI_Finalize();
-```
-
-The logs are written to `logs/<world_rank>.txt` where the user has to create the folder `logs` in the directory where the binary is run, e.g. in `build`. An example can be found in `toy_examples/logging.c`. The logging is global in all files that include `logging.h` but local per mpi processor. If one compiles with `-DNDEBUG` (included in `-DCMAKE_BUILD_TYPE=Release`) the logging disappears without a trace and doesn't have any runtime costs. This can be checked by `cd toy_examples; make test;`.
 
 ### Timing
 A minimal timing class is provided in `include/timer.hpp` and can be used as follows:
@@ -105,9 +88,6 @@ timer.stop(timestamp);
 
 ```
 Because this way the sum of the computation time and send time will be equal to timing the both blocks together.
-
-
-## Report Generation
 
 ---
 The project can be opened with sublime text. A build system and settings for EasyClangComplete are set.

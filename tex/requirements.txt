@@ -1,0 +1,4 @@
+numpy
+matplotlib==2.2.2
+jinja2
+pyyaml
