@@ -1,4 +1,4 @@
-def parse_data(data, outpath, options):
+def parse_data(data, outpath):
     import numpy as np
     import matplotlib.pyplot as plt
     import os
@@ -34,4 +34,14 @@ def parse_data(data, outpath, options):
 
     plt.savefig(os.path.join(outpath, "fig01.png"), format='png', dpi=300)
 
-    options['length'] = str(datetime.timedelta(seconds=np.amax(times[:, 2]) - np.amin(times[:, 1])))
+    # runtime
+    total_seconds = np.amax(times[:, 2]) - np.amin(times[:, 1])
+    hours, rem = divmod(total_seconds, 60*60)
+    minutes, rem = divmod(rem, 60)
+    seconds, rem = divmod(rem, 1)
+    data['runtime'] = "{:02}:{:02}:{:02}.{:02}".format(int(hours),
+        int(minutes), int(seconds), int(rem*100))
+
+    # starttime
+    starttime = datetime.datetime.fromtimestamp(1538639407)
+    data["starttime"] = starttime.strftime('%B %-d, %Y  %H:%M:%S')

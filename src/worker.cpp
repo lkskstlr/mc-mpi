@@ -6,6 +6,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <thread>
+#include <time.h>
 #include <unistd.h>
 
 using std::size_t;
@@ -18,6 +19,10 @@ Worker::Worker(int world_rank, const MCMPIOptions &options)
                              options.particle_min_weight)),
       particle_comm(world_rank, options.buffer_size) {
 
+  /* Time */
+  if (world_rank == 0) {
+    unix_timestamp_start = (unsigned long)time(NULL);
+  }
   /* reserve */
   timer_states.reserve(100);
 
@@ -211,6 +216,7 @@ void Worker::gather_times(int *total_len, int **displs, Timer::State **states) {
 
 void Worker::dump_config() {
   YamlDumper yaml_dumper("out/config.yaml");
+  yaml_dumper.comment("Read from config");
   yaml_dumper.dump_int("nb_cells_per_layer", options.nb_cells_per_layer);
   yaml_dumper.dump_double("x_min", options.x_min);
   yaml_dumper.dump_double("x_max", options.x_max);
@@ -222,7 +228,13 @@ void Worker::dump_config() {
   yaml_dumper.dump_int("cycle_nb_steps", options.cycle_nb_steps);
   yaml_dumper.dump_double("statistics_cycle_time",
                           options.statistics_cycle_time);
+  yaml_dumper.new_line();
+  yaml_dumper.comment("Other values");
   yaml_dumper.dump_int("world_size", options.world_size);
+  yaml_dumper.dump_unsigned_long("unix_timestamp_start", unix_timestamp_start);
+  char _hostname[1000];
+  gethostname(_hostname, 1000);
+  yaml_dumper.dump_string("hostname", _hostname);
 }
 
 std::vector<real_t> Worker::weights_absorbed() {

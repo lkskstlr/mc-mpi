@@ -20,13 +20,34 @@
 \Large\textbf{Single Run Report}
 \end{center}
 
-The runtime was \VAR{length}.
+The run started at \VAR{starttime} and the root machine was \VAR{hostname}. The simulation used \VAR{world_size} processes to simulate \VAR{nb_particles} particles in a total of \VAR{nb_cells} cells, i.e. \VAR{nb_cells_per_layer} cells per process. The runtime for the simulation was: \VAR{runtime}. Figure \ref{fig:loading} displays the loading of the processes over the runtime.
 
 
 \begin{figure}[h]
     \centering
     \includegraphics[width=\textwidth]{fig01.png}
-    \caption{Runtime Analysis.}
-\end{figure} 
+    \caption{Load for all processes. Process 0 is shown at the top.}
+    \label{fig:loading}
+\end{figure}
+
+
+\FloatBarrier
+\begin{table}[hbt]
+\centering
+\begin{tabular}{l | l}
+$x_{min}$ & \VAR{x_min} \\
+$x_{max}$ & \VAR{x_max} \\
+$x_{ini}$ & \VAR{x_ini} \\
+particle\_min\_weight & \VAR{particle_min_weight} \\
+nb\_particles & \VAR{nb_particles} \\
+buffer\_size & \VAR{buffer_size} \\
+cycle\_time & \VAR{cycle_time} \\
+cycle\_nb\_steps & \VAR{cycle_nb_steps} \\
+statistics\_cycle\_time & \VAR{statistics_cycle_time}\\
+world\_size & \VAR{world_size}
+\end{tabular}
+\caption{The configuration values used for this run.}
+\label{tab:config}
+\end{table}
 
 \end{document}

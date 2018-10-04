@@ -10,6 +10,8 @@ import tarfile
 import numpy as np
 import importlib
 import sys
+import yaml
+from pprint import pprint
 
 
 def is_valid_file(parser, arg):
@@ -35,14 +37,20 @@ def read_data(filename):
     _tar = tarfile.open(name=filename, mode="r")
     _tar.extractall("build/")
 
+    with open("build/out/config.yaml", 'r') as stream:
+        try:
+            data = yaml.load(stream)
+        except yaml.YAMLError as exc:
+            print(exc)
+    
+
     times = np.genfromtxt("build/out/times.csv", skip_header=1, delimiter=',')
     times[:, 2] -= times[0, 1]
     times[:, 1] -= times[0, 1]
 
-    data = {
-        "times": times
-    }
+    data["times"] = times
 
+    data["nb_cells"] = data["nb_cells_per_layer"] * data["world_size"]
     return data
 
 def jinja_to_tex(template_name, options):
@@ -105,28 +113,39 @@ if __name__ == "__main__":
     args = parser.parse_args()
     template_name = args.type
 
+    print("Generating report. This may take a while.")
+
     # Nuke Build
     if os.path.exists("build"):
         shutil.rmtree("build")
     os.mkdir("build")
 
+    print("Reading run data ... ", end="")
+    sys.stdout.flush()
     data = read_data(args.filename)
-
-    # Set Base Options
-    options = {
-        "date": datetime.date.today().strftime('%B %-d, %Y'),
-    }
+    print("done")
+    data["date"] = datetime.date.today().strftime('%B %-d, %Y')
 
     # Parse Data
     shutil.copyfile("templates/{}/{}.py".format(template_name, template_name),
         "__tmp_{}.py".format(template_name))
     my_module = importlib.import_module('__tmp_{}'.format(template_name))
     os.remove("__tmp_{}.py".format(template_name))
-    my_module.parse_data(data, "build", options)
+    print("Parsing Data, Creating figures, etc. ... ", end="")
+    sys.stdout.flush()
+    my_module.parse_data(data, "build")
+    print("done")
 
     # Render jinja -> tex -> pdf
-    jinja_to_tex(template_name, options)
+    print("Rendering .jinja.tex to .tex ... ", end="")
+    sys.stdout.flush()
+    jinja_to_tex(template_name, data)
+    print("done")
+
+    print("Calling latexmk ... ", end="")
+    sys.stdout.flush()
     tex_to_pdf(template_name)
+    print("done")
 
     
     

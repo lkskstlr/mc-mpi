@@ -72,6 +72,8 @@ private:
   void mkdir_out();
   void dump_config();
   void dump_times(int total_len, int const *displs, Timer::State const *states);
+
+  unsigned long unix_timestamp_start;
 };
 
 Worker worker_from_config(std::string filepath, int world_size, int world_rank);
