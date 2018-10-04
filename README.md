@@ -15,7 +15,7 @@ The results will be saved in `build/out` which should not be touched by the user
 
 
 ## Reports
-After a run you can generate a report by `cd tex` (from base directory) and calling `./report single_run ../saved_runs/latest` which will generate the report PDF in `tex/build/single_run.pdf`. The `report` script needs the python dependencies in `tex/requirements.txt`. There is a bug in/with matplotlib 3.0.0 so version 2.2.2 is recommended.
+After a run you can generate a report by `cd tex` (from base directory) and calling `./report single_run ../saved_runs/latest` which will generate the report PDF in `tex/build/single_run.pdf`. The `report` script needs the python dependencies in `tex/requirements.txt` (`pip install -r requirements.txt`). There is a bug in/with matplotlib 3.0.0 so version 2.2.2 is recommended. It also needs a working `latexmk` in the path.
 
 ## Tests
 A minimal testing script can be found in `test` and can be called by `./test`. A possible output is
