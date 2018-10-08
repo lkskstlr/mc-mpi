@@ -9,7 +9,7 @@ export CXX=mpicxx
 mkdir build; cd build; cmake .. -DCMAKE_BUILD_TYPE=Release; make;
 mpirun -n 5 ./main ../config.yaml
 ```
-The third line *sets the CXX environment variable* to an mpi compatible compiler. The one but last line runs on 5 processes with parameters specified in `config.yaml`.
+The third line *sets the CXX environment variable* to an mpi compatible compiler. The last line runs on 5 processes with parameters specified in `config.yaml`.
 
 The results will be saved in `build/out` which should not be touched by the user. If you want to save this specific run, call `./save_run` from the build directory and the run will be saved to `../saved_runs/<timestamp>.tar.gz`. Also the `latest` symlink in `saved_runs` will be set for convenience.
 
