@@ -27,7 +27,8 @@ Layer::Layer(real_t x_min, real_t x_max, int index_start, int m,
   sigs.reserve(m);
   real_t x_mid;
   for (int i = 0; i < m; ++i) {
-    x_mid = (i * dx) + 0.5 * dx;
+    x_mid = x_min + (i * dx) + 0.5 * dx;
+    printf("x_mid = %f\n", x_mid);
     sigs.push_back(exp(-0.5 * x_mid));
   }
 

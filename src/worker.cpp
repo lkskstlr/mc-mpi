@@ -214,6 +214,37 @@ void Worker::gather_times(int *total_len, int **displs, Timer::State **states) {
               recvcounts, *displs, timer_state_mpi_t, 0, MPI_COMM_WORLD);
 }
 
+void Worker::gather_weights_absorbed(int *total_len, int **displs,
+                                     real_t **weights) {
+  int *recvcounts = NULL;
+
+  if (world_rank == 0) {
+    recvcounts = (int *)malloc(options.world_size * sizeof(int));
+  }
+
+  int my_len = static_cast<int>(layer.weights_absorbed.size());
+  MPI_Gather(&my_len, 1, MPI_INT, recvcounts, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+  *total_len = 0;
+
+  if (world_rank == 0) {
+    *displs = (int *)malloc(options.world_size * sizeof(int));
+
+    (*displs)[0] = 0;
+    *total_len += recvcounts[0];
+
+    for (int i = 1; i < options.world_size; i++) {
+      *total_len += recvcounts[i];
+      (*displs)[i] = (*displs)[i - 1] + recvcounts[i - 1];
+    }
+
+    *weights = (real_t *)malloc((*total_len) * sizeof(real_t));
+  }
+
+  MPI_Gatherv(layer.weights_absorbed.data(), my_len, MCMPI_REAL_T, *weights,
+              recvcounts, *displs, MCMPI_REAL_T, 0, MPI_COMM_WORLD);
+}
+
 void Worker::dump_config() {
   YamlDumper yaml_dumper("out/config.yaml");
   yaml_dumper.comment("Read from config");
@@ -297,6 +328,28 @@ void Worker::dump_times(int total_len, int const *displs,
             states[i].cumm_times[Timer::Tag::Send],
             states[i].cumm_times[Timer::Tag::Recv],
             states[i].cumm_times[Timer::Tag::Idle]);
+  }
+
+  fclose(file);
+}
+
+void Worker::dump_weights_absorbed(int total_len, int const *displs,
+                                   real_t const *weights) {
+  FILE *file;
+  file = fopen("out/weights.csv", "w");
+  if (!file) {
+    fprintf(stderr, "Couldn't open file out/weights.csv for writing.\n");
+    exit(1);
+  }
+
+  fprintf(file, "proc, x, weight\n");
+  int proc = 0;
+  real_t x_pos = layer.dx;
+  for (int i = 0; i < total_len; ++i) {
+    if (proc < options.world_size - 1 && displs[proc + 1] == i) {
+      proc++;
+    }
+    fprintf(file, "%d, %.18e, %.18e\n", proc, 0.1, 0.1);
   }
 
   fclose(file);

@@ -69,9 +69,12 @@ public:
 
 private:
   void gather_times(int *total_len, int **displs, Timer::State **states);
+  void gather_weights_absorbed(int *total_len, int **displs, real_t **weights);
   void mkdir_out();
   void dump_config();
   void dump_times(int total_len, int const *displs, Timer::State const *states);
+  void dump_weights_absorbed(int total_len, int const *displs,
+                             real_t const *weights);
 
   unsigned long unix_timestamp_start;
 };
