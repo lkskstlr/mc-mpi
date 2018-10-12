@@ -4,15 +4,17 @@ ParticleComm::ParticleComm(int world_rank, std::size_t max_buffer_size) {
 
   /* Particle as MPI Type */
   MPI_Datatype mpi_particle_type;
-  constexpr int nitems = 4;
-  int blocklengths[nitems] = {1, 1, 1, 1};
-  MPI_Datatype types[nitems] = {MPI_FLOAT, MPI_FLOAT, MPI_FLOAT, MPI_INT};
+  constexpr int nitems = 5;
+  int blocklengths[nitems] = {1, 1, 1, 1, 1};
+  MPI_Datatype types[nitems] = {MPI_UNSIGNED_LONG_LONG, MPI_FLOAT, MPI_FLOAT,
+                                MPI_FLOAT, MPI_INT};
   MPI_Aint offsets[nitems];
 
-  offsets[0] = offsetof(Particle, x);
-  offsets[1] = offsetof(Particle, mu);
-  offsets[2] = offsetof(Particle, wmc);
-  offsets[3] = offsetof(Particle, index);
+  offsets[0] = offsetof(Particle, seed);
+  offsets[1] = offsetof(Particle, x);
+  offsets[2] = offsetof(Particle, mu);
+  offsets[3] = offsetof(Particle, wmc);
+  offsets[4] = offsetof(Particle, index);
 
   MPI_Type_create_struct(nitems, blocklengths, offsets, types,
                          &mpi_particle_type);

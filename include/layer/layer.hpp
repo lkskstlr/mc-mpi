@@ -57,6 +57,8 @@ public:
                 std::vector<Particle> &particles_right,
                 std::vector<Particle> &particles_disabled);
 
+  void dump_WA();
+
   // -- Data --
   const real_t x_min, x_max;
   std::vector<Particle> particles;

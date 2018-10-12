@@ -100,8 +100,10 @@ target_link_libraries(mcmpi PRIVATE
 )
 
 
+
 ########## Scripts ##########
 configure_file(scripts/save_run save_run COPYONLY)
+
 
 
 ########## Programs ##########
@@ -115,28 +117,40 @@ target_link_libraries(main
   mcmpi
 )
 
-# # Tests
-# add_executable(test_async_comm src_test/test_async_comm.cpp)
-# target_include_directories(test_async_comm PRIVATE include)
-# set_target_properties(test_async_comm PROPERTIES
-#     CXX_STANDARD 17
-#     CXX_STANDARD_REQUIRED YES
-#     CXX_EXTENSIONS NO
-# )
-# target_link_libraries(test_async_comm
-#     libmc-mpi
-# )
 
-# add_executable(test_serialization src_test/test_serialization.cpp)
-# target_include_directories(test_serialization PRIVATE include)
-# set_target_properties(test_serialization PROPERTIES
-#     CXX_STANDARD 17
-#     CXX_STANDARD_REQUIRED YES
-#     CXX_EXTENSIONS NO
-# )
-# target_link_libraries(test_serialization
-#     libmc-mpi
-# )
+
+########## Tests ##########
+add_executable(test_comm src_test/test_comm.cpp)
+set_target_properties(test_comm PROPERTIES
+  CXX_STANDARD 17
+  CXX_STANDARD_REQUIRED YES
+  CXX_EXTENSIONS NO
+)
+target_link_libraries(test_comm
+  comm
+)
+
+
+add_executable(test_serialization src_test/test_serialization.cpp)
+set_target_properties(test_serialization PROPERTIES
+  CXX_STANDARD 17
+  CXX_STANDARD_REQUIRED YES
+  CXX_EXTENSIONS NO
+)
+target_link_libraries(test_serialization
+  comm
+)
+
+
+add_executable(test_layer src_test/test_layer.cpp)
+set_target_properties(test_layer PROPERTIES
+  CXX_STANDARD 17
+  CXX_STANDARD_REQUIRED YES
+  CXX_EXTENSIONS NO
+)
+target_link_libraries(test_layer
+  layer
+)
 
 # add_executable(test_particle_step src_test/test_particle_step.cpp)
 # target_include_directories(test_particle_step PRIVATE include)

@@ -1,6 +1,6 @@
 #include "layer.hpp"
 #include "random.h"
-#include <cmath>
+#include <math.h>
 
 Layer decompose_domain(real_t x_min, real_t x_max, real_t x_ini, int world_size,
                        int world_rank, int cells_per_layer, int nb_particles,
@@ -30,8 +30,7 @@ Layer::Layer(real_t x_min, real_t x_max, int index_start, int m,
   real_t x_mid;
   for (int i = 0; i < m; ++i) {
     x_mid = x_min + (i * dx) + 0.5 * dx;
-    printf("x_mid = %f\n", x_mid);
-    sigs.push_back(exp(-0.5 * x_mid));
+    sigs.push_back(exp(-x_mid));
   }
 
   // absorption rates
@@ -81,9 +80,17 @@ int Layer::particle_step(Particle &particle) {
   const real_t sig_a = sigs[index_local] * absorption_rates[index_local];
   const real_t sig_i = sigs[index_local] * interaction_rate;
 
+  // printf("index_local = %d, x = %f, interaction_rate = %f, sigs[index_local]
+  // "
+  //        "= %f\n",
+  //        index_local, particle.x, interaction_rate, sigs[index_local]);
+  printf("seed = %llu, x = %f\n", particle.seed, particle.x);
+
   // calculate theoretic movement
   const real_t h = rnd_real(&particle.seed);
-  real_t di = sig_i > EPS_PRECISION ? -std::log(h) / sig_i : MAXREAL;
+  printf("h = %f, sig_i = %f\n", h, sig_i);
+  real_t di = sig_i > EPS_PRECISION ? -log(h) / sig_i : MAXREAL;
+  printf("di1 = %f\n", di);
 
   // -- possible new cell --
   int index_new;
@@ -96,9 +103,13 @@ int Layer::particle_step(Particle &particle) {
     index_new = particle.index + 1;
     x_new_edge = (particle.index + 1) * dx;
   }
-  const real_t di_edge = abs(x_new_edge - particle.x);
 
-  if (abs(di * particle.mu) < di_edge) {
+  real_t di_edge = MAXREAL;
+  if (particle.mu < -EPS_PRECISION || EPS_PRECISION < particle.mu) {
+    di_edge = (x_new_edge - particle.x) / particle.mu;
+  }
+
+  if (di < di_edge) {
     /* move inside cell an draw new mu */
     index_new = particle.index;
     particle.x += di * particle.mu;
@@ -108,9 +119,14 @@ int Layer::particle_step(Particle &particle) {
     di = di_edge;
     particle.x = x_new_edge;
   }
+  printf("di2 = %f\n", di);
 
   // -- Calculate amount of absorbed energy --
-  const real_t dw = (1 - exp(-sig_a * di)) * particle.wmc;
+  const real_t dw = (1 - expf(-sig_a * di)) * particle.wmc;
+  printf("dw == : sig_a*di = %.10e, wmc = %.10e, dw = %.10e\n", di * sig_a,
+         particle.wmc, dw);
+  printf("magic  = %.18f\n", exp(-sig_a * di));
+  printf("magicf = %.18f\n", expf(-sig_a * di));
 
   /* Weight removed from particle is added to the layer */
   particle.wmc -= dw;
@@ -160,4 +176,20 @@ void Layer::simulate(int nb_steps, std::vector<Particle> &particles_left,
   particles_left.shrink_to_fit();
   particles_right.shrink_to_fit();
   particles_disabled.shrink_to_fit();
+}
+
+void Layer::dump_WA() {
+  FILE *file;
+  file = fopen("WA.out", "w");
+  if (!file) {
+    fprintf(stderr, "Couldn't open file WA.out for writing.\n");
+    exit(1);
+  }
+
+  for (int i = 0; i < weights_absorbed.size(); ++i) {
+    fprintf(file, "%.4e %.3e\n", x_min + (i * dx) + 0.5 * dx,
+            weights_absorbed[i] / dx);
+  }
+
+  fclose(file);
 }

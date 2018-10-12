@@ -26,7 +26,8 @@ int main(int argc, char const *argv[]) {
   size_t max_buffer_size = 10 * sizeof(Particle);
   ParticleComm comm(world_rank, max_buffer_size);
 
-  Particle p{0.172634512365276, 123.12342351, -1231.123486123, 2134512};
+  Particle p{5127801, 0.172634512365276, 123.12342351, -1231.123486123,
+             2134512};
   const int hash1 = hash((char *)&p, sizeof(p));
 
   if (world_rank == 1) {
