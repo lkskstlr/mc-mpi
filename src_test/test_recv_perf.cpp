@@ -55,6 +55,17 @@ int main(int argc, char const *argv[]) {
     cout << "Recv: " << elapsed.count() << " ms for " << nb_particles * nb_reps
          << " particles in " << nb_reps << " reps" << endl;
   }
+  if (world_rank == 0) {
+    // master keep busy
+    int j = 31;
+    int k = 17;
+    int s = 7;
+
+    for (int i = 0; i < 1000'000'000; ++i) {
+      s = ((s ^ (s % j)) << 1) % k;
+    }
+    printf("s = %d\n", s);
+  }
 
   MPI_Barrier(MPI_COMM_WORLD);
   if (world_rank == 0) {

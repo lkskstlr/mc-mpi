@@ -43,5 +43,5 @@ def parse_data(data, outpath):
         int(minutes), int(seconds), int(rem*100))
 
     # starttime
-    starttime = datetime.datetime.fromtimestamp(1538639407)
+    starttime = datetime.datetime.fromtimestamp(data['unix_timestamp_start'])
     data["starttime"] = starttime.strftime('%B %-d, %Y  %H:%M:%S')
