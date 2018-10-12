@@ -163,3 +163,14 @@ target_link_libraries(test_comm_perf
   timer
   layer
 )
+
+add_executable(test_recv_perf src_test/test_recv_perf.cpp)
+set_target_properties(test_recv_perf PROPERTIES
+  CXX_STANDARD 17
+  CXX_STANDARD_REQUIRED YES
+  CXX_EXTENSIONS NO
+)
+target_link_libraries(test_recv_perf
+  comm
+  layer
+)

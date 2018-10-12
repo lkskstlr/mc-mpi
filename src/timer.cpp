@@ -47,7 +47,7 @@ void Timer::reset() {
 }
 
 Timer::State Timer::restart(Timestamp &timestamp, Tag tag) {
-  // change context
+  // change context; current time
   change(timestamp, tag);
 
   // populate result
@@ -56,6 +56,9 @@ Timer::State Timer::restart(Timestamp &timestamp, Tag tag) {
 
   // change own state
   state.starttime = timestamp.time;
+  for (int i = 0; i < Tag::STATE_COUNT; ++i) {
+    state.cumm_times[i] = 0.0;
+  }
 
   // return
   return res;

@@ -85,8 +85,14 @@ void Worker::spin() {
     timer.change(timestamp, Timer::Tag::Recv);
     {
       // recv
+      double start_t = MPI_Wtime();
+      int size_before = static_cast<int>(layer.particles.size());
       particle_comm.recv(layer.particles, MPI_ANY_SOURCE,
                          MCMPIOptions::Tag::Particle);
+      double end_t = MPI_Wtime();
+
+      nb_recv.push_back(static_cast<int>(layer.particles.size()) - size_before);
+      dt_recv.push_back(end_t - start_t);
     }
 
     /* Receive Events */
@@ -182,6 +188,9 @@ void Worker::dump() {
 
   free(displs);
   free(states);
+
+  MPI_Barrier(MPI_COMM_WORLD);
+  dump_recv_times();
 }
 
 void Worker::gather_times(int *total_len, int **displs, Timer::State **states) {
@@ -328,6 +337,25 @@ void Worker::dump_times(int total_len, int const *displs,
             states[i].cumm_times[Timer::Tag::Send],
             states[i].cumm_times[Timer::Tag::Recv],
             states[i].cumm_times[Timer::Tag::Idle]);
+  }
+
+  fclose(file);
+}
+
+void Worker::dump_recv_times() {
+  FILE *file;
+  char filename[100];
+  sprintf(filename, "out/recv_times_%d.csv", world_rank);
+  file = fopen(filename, "w");
+  if (!file) {
+    fprintf(stderr, "Couldn't open file %s for writing.\n", filename);
+    exit(1);
+  }
+
+  fprintf(file, "nb, dt\n");
+  int proc = 0;
+  for (int i = 0; i < nb_recv.size(); ++i) {
+    fprintf(file, "%d, %.18e\n", nb_recv[i], dt_recv[i]);
   }
 
   fclose(file);
