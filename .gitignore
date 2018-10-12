@@ -17,3 +17,4 @@ tex/__pycache__/
 .ipynb_checkpoints/
 tex/.ipynb_checkpoints
 saved_runs
+docs/doxygen/

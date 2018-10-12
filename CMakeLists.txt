@@ -22,101 +22,129 @@ if(NOT WIN32)
 endif()
 
 if(DEFINED ENV{CXX})
-    message(STATUS "${Yellow}CXX=" $ENV{CXX} ". Make sure to use an MPI compatible compiler${ColourReset}. On unix system through e.g. 'export CXX=mpicxx'.")
+  message(STATUS "${Yellow}CXX=" $ENV{CXX} ". Make sure to use an MPI compatible compiler${ColourReset}. On unix system through e.g. 'export CXX=mpicxx'.")
 else(DEFINED ENV{CXX})
-    message(FATAL_ERROR "Please define the environment variable for the mpi capable cxx compiler. On unix system through e.g. 'export CXX=mpicxx'.")
+  message(FATAL_ERROR "Please define the environment variable for the mpi capable cxx compiler. On unix system through e.g. 'export CXX=mpicxx'.")
 endif(DEFINED ENV{CXX})
 
-OPTION(DEBUG_VERBOSE "Verbose Logfiles are used" OFF) # Enabled by default
-IF(DEBUG_VERBOSE)
-    ADD_DEFINITIONS(-DMCMPI_LOG_VERBOSE)
-ENDIF(DEBUG_VERBOSE)
 
+########## Libraries ##########
 add_library(yaml SHARED
-    src/yaml_loader.cpp
-    src/yaml_dumper.cpp
+  src/yaml_loader.cpp
+  src/yaml_dumper.cpp
 )
-target_include_directories(yaml PUBLIC include)
+target_include_directories(yaml PUBLIC include/yaml)
 set_target_properties(yaml PROPERTIES
-    CXX_STANDARD 17
-    CXX_STANDARD_REQUIRED YES
-    CXX_EXTENSIONS NO
+  CXX_STANDARD 17
+  CXX_STANDARD_REQUIRED YES
+  CXX_EXTENSIONS NO
 )
 
-add_library(libmc-base SHARED
-    src/random.cpp
-    src/layer.cpp
+
+add_library(timer SHARED
+  src/timer.cpp
 )
-target_include_directories(libmc-base PUBLIC include)
-set_target_properties(libmc-base PROPERTIES
-    CXX_STANDARD 17
-    CXX_STANDARD_REQUIRED YES
-    CXX_EXTENSIONS NO
+target_include_directories(timer PUBLIC include/timer)
+set_target_properties(timer PROPERTIES
+  CXX_STANDARD 17
+  CXX_STANDARD_REQUIRED YES
+  CXX_EXTENSIONS NO
 )
 
-add_library(libmc-mpi SHARED
-    src/worker.cpp
-    src/timer.cpp
-    src/async_comm-impl.cpp
-    src/particle_comm.cpp
+
+add_library(types INTERFACE)
+target_include_directories(types INTERFACE include/types)
+target_compile_features(types INTERFACE cxx_std_11)
+
+
+add_library(layer SHARED src/layer.cpp src/random.cpp)
+target_include_directories(layer PUBLIC include/layer)
+target_include_directories(layer PRIVATE include/layer/private)
+set_target_properties(layer PROPERTIES
+  CXX_STANDARD 17
+  CXX_STANDARD_REQUIRED YES
+  CXX_EXTENSIONS NO
 )
-target_include_directories(libmc-mpi PUBLIC include)
-set_target_properties(libmc-mpi PROPERTIES
-    CXX_STANDARD 17
-    CXX_STANDARD_REQUIRED YES
-    CXX_EXTENSIONS NO
+target_link_libraries(layer PUBLIC types)
+
+
+add_library(comm SHARED
+  src/async_comm-impl.cpp
+  src/async_comm.cpp
+  src/particle_comm.cpp
 )
-target_link_libraries(libmc-mpi
+target_include_directories(comm PUBLIC include/comm)
+set_target_properties(comm PROPERTIES
+  CXX_STANDARD 17
+  CXX_STANDARD_REQUIRED YES
+  CXX_EXTENSIONS NO
+)
+target_link_libraries(comm PUBLIC types)
+
+
+add_library(mcmpi SHARED src/worker.cpp)
+target_include_directories(mcmpi PUBLIC include/mcmpi)
+set_target_properties(mcmpi PROPERTIES
+  CXX_STANDARD 17
+  CXX_STANDARD_REQUIRED YES
+  CXX_EXTENSIONS NO
+)
+target_link_libraries(mcmpi PUBLIC
+  types
+  layer
+  timer
+  comm
+)
+target_link_libraries(mcmpi PRIVATE
   yaml
-  libmc-base
 )
 
-# Scripts
+
+########## Scripts ##########
 configure_file(scripts/save_run save_run COPYONLY)
 
 
-# Main
+########## Programs ##########
 add_executable(main src/main.cpp)
-target_include_directories(main PRIVATE include)
 set_target_properties(main PROPERTIES
-    CXX_STANDARD 17
-    CXX_STANDARD_REQUIRED YES
-    CXX_EXTENSIONS NO
+  CXX_STANDARD 17
+  CXX_STANDARD_REQUIRED YES
+  CXX_EXTENSIONS NO
 )
 target_link_libraries(main
-    libmc-mpi
+  mcmpi
 )
 
-# Tests
-add_executable(test_async_comm src_test/test_async_comm.cpp)
-target_include_directories(test_async_comm PRIVATE include)
-set_target_properties(test_async_comm PROPERTIES
-    CXX_STANDARD 17
-    CXX_STANDARD_REQUIRED YES
-    CXX_EXTENSIONS NO
-)
-target_link_libraries(test_async_comm
-    libmc-mpi
-)
+# # Tests
+# add_executable(test_async_comm src_test/test_async_comm.cpp)
+# target_include_directories(test_async_comm PRIVATE include)
+# set_target_properties(test_async_comm PROPERTIES
+#     CXX_STANDARD 17
+#     CXX_STANDARD_REQUIRED YES
+#     CXX_EXTENSIONS NO
+# )
+# target_link_libraries(test_async_comm
+#     libmc-mpi
+# )
 
-add_executable(test_serialization src_test/test_serialization.cpp)
-target_include_directories(test_serialization PRIVATE include)
-set_target_properties(test_serialization PROPERTIES
-    CXX_STANDARD 17
-    CXX_STANDARD_REQUIRED YES
-    CXX_EXTENSIONS NO
-)
-target_link_libraries(test_serialization
-    libmc-mpi
-)
+# add_executable(test_serialization src_test/test_serialization.cpp)
+# target_include_directories(test_serialization PRIVATE include)
+# set_target_properties(test_serialization PROPERTIES
+#     CXX_STANDARD 17
+#     CXX_STANDARD_REQUIRED YES
+#     CXX_EXTENSIONS NO
+# )
+# target_link_libraries(test_serialization
+#     libmc-mpi
+# )
 
-add_executable(test_particle_step src_test/test_particle_step.cpp)
-target_include_directories(test_particle_step PRIVATE include)
-set_target_properties(test_particle_step PROPERTIES
-    CXX_STANDARD 17
-    CXX_STANDARD_REQUIRED YES
-    CXX_EXTENSIONS NO
-)
-target_link_libraries(test_particle_step
-    libmc-base
-)
+# add_executable(test_particle_step src_test/test_particle_step.cpp)
+# target_include_directories(test_particle_step PRIVATE include)
+# set_target_properties(test_particle_step PROPERTIES
+#     CXX_STANDARD 17
+#     CXX_STANDARD_REQUIRED YES
+#     CXX_EXTENSIONS NO
+# )
+# target_link_libraries(test_particle_step
+#     libmc-base
+# )

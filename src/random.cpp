@@ -1,20 +1,32 @@
-#include "random.hpp"
+/**
+ * INF560 - MC
+ */
+#include "random.h"
 
-#define N_DISCARD 10000
+/* REAL RNG */
 
-UnifDist::UnifDist(std::uint_fast32_t seed) {
-  // generator
-  std::minstd_rand0 lc_generator(seed);
-  std::uint_least32_t seed_data[std::mt19937::state_size];
+static const seed_t RNG_G = (seed_t)(6364136223846793005ull);
+static const seed_t RNG_C = (seed_t)(1442695040888963407ull);
+static const seed_t RNG_P = (seed_t)(1) << 63;
 
-  std::generate_n(seed_data, std::mt19937::state_size, std::ref(lc_generator));
-  std::seed_seq q(std::begin(seed_data), std::end(seed_data));
-
-  std::mt19937 gen{q};
-  gen.discard(N_DISCARD);
-
-  // distribution
-  dis = std::uniform_real_distribution<real_t>(0.0, 1.0);
+real_t rnd_real(seed_t *seed)
+{
+  real_t inv_RNG_P = (real_t)(1) / (real_t)(RNG_P);
+  *seed = (RNG_G * *seed + RNG_C) % RNG_P;
+  return (real_t)(*seed) * inv_RNG_P;
 }
 
-real_t UnifDist::operator()() { return dis(gen); }
+
+/* SEED RNG */
+
+static const seed_t RNGS_G = (seed_t)(5177284530976225183ull);
+static const seed_t RNGS_C = (seed_t)(2096348467109453893ull);
+static const seed_t RNGS_P = (seed_t)(1) << 63;
+
+seed_t rnd_seed(seed_t *seed)
+{
+  real_t inv_RNGS_P = (real_t)(1) / (real_t)(RNGS_P);
+  *seed = (RNGS_G * *seed + RNGS_C) % RNGS_P;
+  return *seed;
+}
+

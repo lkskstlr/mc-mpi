@@ -12,8 +12,8 @@
 using std::size_t;
 
 Worker::Worker(int world_rank, const MCMPIOptions &options)
-    : world_rank(world_rank), options(options), dist(SOME_SEED + world_rank),
-      layer(decompose_domain(dist, options.x_min, options.x_max, options.x_ini,
+    : world_rank(world_rank), options(options),
+      layer(decompose_domain(options.x_min, options.x_max, options.x_ini,
                              options.world_size, world_rank,
                              options.nb_cells_per_layer, options.nb_particles,
                              options.particle_min_weight)),
@@ -53,8 +53,8 @@ void Worker::spin() {
     /* Simulate Particles */
     timer.change(timestamp, Timer::Tag::Computation);
     {
-      layer.simulate(dist, options.cycle_nb_steps, particles_left,
-                     particles_right, particles_disabled);
+      layer.simulate(options.cycle_nb_steps, particles_left, particles_right,
+                     particles_disabled);
     }
 
     /* Sending Particles */

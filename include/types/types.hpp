@@ -4,6 +4,8 @@
 #include <limits>
 #include <mpi.h>
 
+typedef unsigned long long seed_t;
+
 #if !defined MC_SIMPLE_PRECISION && !defined MC_DOUBLE_PRECISION
 #define MC_SIMPLE_PRECIS
 #endif

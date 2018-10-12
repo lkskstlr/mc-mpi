@@ -5,7 +5,6 @@
 #include "mcmpi_options.hpp"
 #include "particle.hpp"
 #include "particle_comm.hpp"
-#include "random.hpp"
 #include "timer.hpp"
 #include "types.hpp"
 #include <string>
@@ -57,7 +56,6 @@ public:
   // private:
   const int world_rank;
   const MCMPIOptions options;
-  UnifDist dist;
   Layer layer;
   ParticleComm particle_comm;
   std::vector<Particle> particles_left, particles_right, particles_disabled;

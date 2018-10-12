@@ -13,6 +13,7 @@ public:
                 structure. If x \approx y, where y is the boundary between two
                 cells, it is hard to tell in which cell the particle is based on
                 floating point inaccuracies. */
+  seed_t seed;
 } Particle;
 
 #endif

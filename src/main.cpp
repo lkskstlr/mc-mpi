@@ -1,7 +1,5 @@
 #include "mcmpi_options.hpp"
-#include "timer.hpp"
 #include "worker.hpp"
-#include "yaml_loader.hpp"
 #include <iostream>
 #include <mpi.h>
 #include <stdio.h>
