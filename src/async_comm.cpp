@@ -90,7 +90,7 @@ bool AsyncComm<T>::recv(std::vector<T> &data, int source, int tag) {
   int nb_data = -1;
   int factor = 2;
   char *buf = NULL;
-  std::size_t buf_bytes = 0;
+  std::size_t buf_size = 0;
   std::size_t buf_used = 0;
   std::size_t new_bytes = 0;
 
@@ -101,31 +101,34 @@ bool AsyncComm<T>::recv(std::vector<T> &data, int source, int tag) {
       new_bytes = sizeof(T) * nb_data;
       if (!buf) {
         buf = (char *)malloc(new_bytes);
-        buf_bytes = new_bytes;
+        buf_size = new_bytes;
       } else {
-        if (buf_used + new_bytes > buf_bytes) {
+        if (buf_used + new_bytes > buf_size) {
           // enlarge
           std::size_t new_size =
-              std::max(factor * buf_bytes, buf_bytes + new_bytes);
-          buf = (char *)realloc(buf, new_bytes);
+              std::max(factor * buf_size, buf_size + factor * new_bytes);
+          buf = (char *)realloc(buf, new_size);
           if (!buf) {
             fprintf(stderr, "Couldn't allocate!\n");
             MPI_Abort(MPI_COMM_WORLD, 1);
           }
+          buf_size = new_size;
         }
       }
-      MPI_Recv(buf + buf_bytes, nb_data, mpi_t, status.MPI_SOURCE, tag,
+      MPI_Recv(buf + buf_used, nb_data, mpi_t, status.MPI_SOURCE, tag,
                MPI_COMM_WORLD, MPI_STATUSES_IGNORE);
-      buf_bytes += new_bytes;
+      buf_used += new_bytes;
     }
   } while (flag);
 
-  data.reserve(data.size() + buf_bytes / sizeof(T));
-  for (std::size_t i = 0; i < buf_bytes / sizeof(T); ++i) {
+  data.reserve(data.size() + buf_used / sizeof(T));
+  for (std::size_t i = 0; i < buf_used / sizeof(T); ++i) {
     data.push_back(((T *)buf)[i]);
   }
 
-  return (buf_bytes > 0);
+  ::free(buf);
+
+  return (buf_used > 0);
 }
 
 template <typename T> void AsyncComm<T>::free() {
