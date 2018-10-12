@@ -80,17 +80,9 @@ int Layer::particle_step(Particle &particle) {
   const real_t sig_a = sigs[index_local] * absorption_rates[index_local];
   const real_t sig_i = sigs[index_local] * interaction_rate;
 
-  // printf("index_local = %d, x = %f, interaction_rate = %f, sigs[index_local]
-  // "
-  //        "= %f\n",
-  //        index_local, particle.x, interaction_rate, sigs[index_local]);
-  printf("seed = %llu, x = %f\n", particle.seed, particle.x);
-
   // calculate theoretic movement
   const real_t h = rnd_real(&particle.seed);
-  printf("h = %f, sig_i = %f\n", h, sig_i);
   real_t di = sig_i > EPS_PRECISION ? -log(h) / sig_i : MAXREAL;
-  printf("di1 = %f\n", di);
 
   // -- possible new cell --
   int index_new;
@@ -119,14 +111,9 @@ int Layer::particle_step(Particle &particle) {
     di = di_edge;
     particle.x = x_new_edge;
   }
-  printf("di2 = %f\n", di);
 
   // -- Calculate amount of absorbed energy --
   const real_t dw = (1 - expf(-sig_a * di)) * particle.wmc;
-  printf("dw == : sig_a*di = %.10e, wmc = %.10e, dw = %.10e\n", di * sig_a,
-         particle.wmc, dw);
-  printf("magic  = %.18f\n", exp(-sig_a * di));
-  printf("magicf = %.18f\n", expf(-sig_a * di));
 
   /* Weight removed from particle is added to the layer */
   particle.wmc -= dw;

@@ -1,6 +1,34 @@
 #include "layer.hpp"
 #include <math.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+void compareFiles(FILE *fp1, FILE *fp2) {
+  char ch1 = getc(fp1);
+  char ch2 = getc(fp2);
+
+  // iterate loop till end of file
+  while (ch1 != EOF && ch2 != EOF) {
+    if (ch1 != ch2) {
+      fclose(fp1);
+      fclose(fp2);
+      printf("ERROR: Output files are not identical!\n");
+      exit(1);
+    }
+
+    // fetching character until end of file
+    ch1 = getc(fp1);
+    ch2 = getc(fp2);
+  }
+
+  if (!(ch1 == EOF && ch2 == EOF)) {
+    fclose(fp1);
+    fclose(fp2);
+    printf("ERROR: Output files are not identical!\n");
+    exit(1);
+  }
+}
 
 int main(int argc, char const *argv[]) {
   constexpr real_t x_min = 0.0;
@@ -21,10 +49,24 @@ int main(int argc, char const *argv[]) {
   std::vector<Particle> particles_disabled;
   layer.simulate(1'000'000'000, particles_left, particles_right,
                  particles_disabled);
-  printf("layer.particles.size() = %zu\n", layer.particles.size());
-  printf("particles_left.size() = %zu\n", particles_left.size());
-  printf("particles_right.size() = %zu\n", particles_right.size());
-  printf("particles_disabled.size() = %zu\n", particles_disabled.size());
   layer.dump_WA();
+
+  // Compare
+  FILE *fp1 = fopen("../src_test/test_layer_target_WA.out", "r");
+  FILE *fp2 = fopen("WA.out", "r");
+
+  if (fp1 == NULL || fp2 == NULL) {
+    printf("Error : Couldn't open files\n");
+    exit(1);
+  }
+
+  compareFiles(fp1, fp2);
+
+  // closing both file
+  fclose(fp1);
+  fclose(fp2);
+
+  printf("CORRECT\n");
+  exit(0);
   return 0;
 }
