@@ -152,13 +152,14 @@ target_link_libraries(test_layer
   layer
 )
 
-# add_executable(test_particle_step src_test/test_particle_step.cpp)
-# target_include_directories(test_particle_step PRIVATE include)
-# set_target_properties(test_particle_step PROPERTIES
-#     CXX_STANDARD 17
-#     CXX_STANDARD_REQUIRED YES
-#     CXX_EXTENSIONS NO
-# )
-# target_link_libraries(test_particle_step
-#     libmc-base
-# )
+add_executable(test_comm_perf src_test/test_comm_perf.cpp)
+set_target_properties(test_comm_perf PROPERTIES
+  CXX_STANDARD 17
+  CXX_STANDARD_REQUIRED YES
+  CXX_EXTENSIONS NO
+)
+target_link_libraries(test_comm_perf
+  comm
+  timer
+  layer
+)

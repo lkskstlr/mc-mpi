@@ -7,6 +7,6 @@ echo -n "Making tarball "
 tar -czf "../saved_runs/$date_str.tar.gz" out
 echo "done"
 
-echo -n "Setting latest symlink"
+echo -n "Setting latest symlink "
 (cd ../saved_runs; [ -e latest ] && rm latest; ln -s $date_str.tar.gz latest)
 echo "done"

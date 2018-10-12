@@ -1,4 +1,5 @@
 #include "async_comm.hpp"
+#include <mpi.h>
 
 template <typename T>
 void AsyncComm<T>::init(int world_rank, MPI_Datatype const mpi_t,
@@ -31,11 +32,11 @@ void AsyncComm<T>::send(std::vector<T> const &data, int dest, int tag) {
     MPI_Abort(MPI_COMM_WORLD, 1);
   }
 
-  // potentially (at least once) free memory. This will lock if the buffer is
+  // potentially free memory. This will lock if the buffer is
   // small and some sends have not completed.
-  do {
+  while (curr_buffer_size + send_info.bytes > max_buffer_size) {
     this->free();
-  } while (curr_buffer_size + send_info.bytes > max_buffer_size);
+  }
 
   send_info.buf = (T *)malloc(send_info.bytes);
   memcpy(send_info.buf, data.data(), send_info.bytes);
@@ -67,9 +68,9 @@ void AsyncComm<T>::send(T const &instance, int dest, int tag) {
 
   // potentially (at least once) free memory. This will lock if the buffer is
   // small and some sends have not completed.
-  do {
+  while (curr_buffer_size + send_info.bytes > max_buffer_size) {
     this->free();
-  } while (curr_buffer_size + send_info.bytes > max_buffer_size);
+  }
 
   send_info.buf = (T *)malloc(send_info.bytes);
   memcpy(send_info.buf, &instance, send_info.bytes);
