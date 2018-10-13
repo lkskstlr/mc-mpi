@@ -2,6 +2,7 @@
 #include "yaml_dumper.hpp"
 #include "yaml_loader.hpp"
 #include <chrono>
+#include <cstring>
 #include <dirent.h>
 #include <stdio.h>
 #include <sys/stat.h>
