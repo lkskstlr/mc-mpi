@@ -1,5 +1,7 @@
 #include "async_comm.hpp"
 #include <algorithm>
+#include <assert.h>
+#include <cstring>
 #include <mpi.h>
 
 template <typename T>
