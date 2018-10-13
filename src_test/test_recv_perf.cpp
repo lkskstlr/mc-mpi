@@ -3,6 +3,7 @@
 #include <chrono>
 #include <iostream>
 #include <mpi.h>
+#include <stdio.h>
 
 int main(int argc, char const *argv[]) {
   using std::cout, std::endl;
@@ -17,9 +18,9 @@ int main(int argc, char const *argv[]) {
 
   constexpr double cycle_time = 1e-3;
   constexpr int num_cycles = 10'000;
-  int buffer_size = 100'000'000;
-  int nb_particles = 1'000;
-  int nb_reps = 1'000;
+  int buffer_size = 1000'000'000;
+  int nb_particles = 500'000;
+  int nb_reps = 10;
 
   std::vector<Particle> particles;
   Particle p{5127801, 0.17, 123.12, -1231.1, 21};
@@ -28,6 +29,9 @@ int main(int argc, char const *argv[]) {
       particles.push_back(p);
     }
   }
+
+  double recv_times[5] = {0.0};
+  int recv_packets = 0;
 
   ParticleComm particle_comm(world_rank, buffer_size);
 
@@ -49,11 +53,14 @@ int main(int argc, char const *argv[]) {
   // Recv
   if (world_rank == 1) {
     auto start = high_resolution_clock::now();
-    particle_comm.recv(particles, MPI_ANY_SOURCE, 0);
+    particle_comm.recv(particles, MPI_ANY_SOURCE, 0, recv_times, &recv_packets);
     auto finish = high_resolution_clock::now();
     std::chrono::duration<double, std::milli> elapsed = finish - start;
     cout << "Recv: " << elapsed.count() << " ms for " << nb_particles * nb_reps
          << " particles in " << nb_reps << " reps" << endl;
+    printf("rank = %d, recv_times = (%f, %f, %f, %f, %f), packets = %d\n",
+           world_rank, recv_times[0], recv_times[1], recv_times[2],
+           recv_times[3], recv_times[4], recv_packets);
   }
   if (world_rank == 0) {
     // master keep busy

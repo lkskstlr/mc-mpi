@@ -68,7 +68,8 @@ public:
    *
    * \return bool true if data was received, false otherwise
    */
-  bool recv(std::vector<T> &data, int source, int tag);
+  bool recv(std::vector<T> &data, int source, int tag, double *times,
+            int *nb_packets);
 
   // frees up memory in buffer
   void free();
