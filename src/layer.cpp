@@ -1,5 +1,6 @@
 #include "layer.hpp"
 #include "random.h"
+#include <assert.h>
 #include <math.h>
 
 Layer decompose_domain(real_t x_min, real_t x_max, real_t x_ini, int world_size,
