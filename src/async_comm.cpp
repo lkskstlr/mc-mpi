@@ -86,8 +86,63 @@ void AsyncComm<T>::send(T const &instance, int dest, int tag) {
 }
 
 template <typename T>
-bool AsyncComm<T>::recv(std::vector<T> &data, int source, int tag,
-                        double *times, int *nb_packets) {
+bool AsyncComm<T>::recv(std::vector<T> &data, int source, int tag) {
+  MPI_Status status;
+  int flag;
+  int nb_data = -1;
+  int factor = 2;
+  char *buf = NULL;
+  std::size_t buf_size = 0;
+  std::size_t buf_used = 0;
+  std::size_t new_bytes = 0;
+
+  do {
+    // Probe
+    MPI_Iprobe(source, tag, MPI_COMM_WORLD, &flag, &status);
+
+    if (flag) {
+      // Get Count
+      MPI_Get_count(&status, mpi_t, &nb_data);
+
+      // Buffer
+      new_bytes = sizeof(T) * nb_data;
+      if (!buf) {
+        buf = (char *)malloc(new_bytes);
+        buf_size = new_bytes;
+      } else {
+        if (buf_used + new_bytes > buf_size) {
+          // enlarge
+          std::size_t new_size =
+              std::max(factor * buf_size, buf_size + factor * new_bytes);
+          buf = (char *)realloc(buf, new_size);
+          if (!buf) {
+            fprintf(stderr, "Couldn't allocate!\n");
+            MPI_Abort(MPI_COMM_WORLD, 1);
+          }
+          buf_size = new_size;
+        }
+      }
+
+      // Recv
+      MPI_Recv(buf + buf_used, nb_data, mpi_t, status.MPI_SOURCE, tag,
+               MPI_COMM_WORLD, MPI_STATUSES_IGNORE);
+      buf_used += new_bytes;
+    }
+  } while (flag);
+
+  data.reserve(data.size() + buf_used / sizeof(T));
+  for (std::size_t i = 0; i < buf_used / sizeof(T); ++i) {
+    data.push_back(((T *)buf)[i]);
+  }
+
+  ::free(buf);
+
+  return (buf_used > 0);
+}
+
+template <typename T>
+bool AsyncComm<T>::recv_debug(std::vector<T> &data, int source, int tag,
+                              double *times, int *nb_packets) {
   MPI_Status status;
   int flag;
   int nb_data = -1;
@@ -102,17 +157,13 @@ bool AsyncComm<T>::recv(std::vector<T> &data, int source, int tag,
     // Probe
     start_t = MPI_Wtime();
     MPI_Iprobe(source, tag, MPI_COMM_WORLD, &flag, &status);
-    if (times) {
-      times[0] += MPI_Wtime() - start_t;
-    }
+    times[0] += MPI_Wtime() - start_t;
 
     if (flag) {
       // Get Count
       start_t = MPI_Wtime();
       MPI_Get_count(&status, mpi_t, &nb_data);
-      if (times) {
-        times[1] += MPI_Wtime() - start_t;
-      }
+      times[1] += MPI_Wtime() - start_t;
 
       // Buffer
       start_t = MPI_Wtime();
@@ -133,21 +184,15 @@ bool AsyncComm<T>::recv(std::vector<T> &data, int source, int tag,
           buf_size = new_size;
         }
       }
-      if (times) {
-        times[2] += MPI_Wtime() - start_t;
-      }
+      times[2] += MPI_Wtime() - start_t;
 
       // Recv
       start_t = MPI_Wtime();
       MPI_Recv(buf + buf_used, nb_data, mpi_t, status.MPI_SOURCE, tag,
                MPI_COMM_WORLD, MPI_STATUSES_IGNORE);
       buf_used += new_bytes;
-      if (times) {
-        times[3] += MPI_Wtime() - start_t;
-      }
-      if (nb_packets) {
-        (*nb_packets)++;
-      }
+      times[3] += MPI_Wtime() - start_t;
+      (*nb_packets)++;
     }
   } while (flag);
 
@@ -156,9 +201,7 @@ bool AsyncComm<T>::recv(std::vector<T> &data, int source, int tag,
   for (std::size_t i = 0; i < buf_used / sizeof(T); ++i) {
     data.push_back(((T *)buf)[i]);
   }
-  if (times) {
-    times[4] += MPI_Wtime() - start_t;
-  }
+  times[4] += MPI_Wtime() - start_t;
 
   ::free(buf);
 

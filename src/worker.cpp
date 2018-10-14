@@ -92,9 +92,9 @@ void Worker::spin() {
       // recv
       double start_t = MPI_Wtime();
       int size_before = static_cast<int>(layer.particles.size());
-      particle_comm.recv(layer.particles, MPI_ANY_SOURCE,
-                         MCMPIOptions::Tag::Particle, recv_times,
-                         &recv_packets);
+      particle_comm.recv_debug(layer.particles, MPI_ANY_SOURCE,
+                               MCMPIOptions::Tag::Particle, recv_times,
+                               &recv_packets);
       double end_t = MPI_Wtime();
 
       nb_recv.push_back(static_cast<int>(layer.particles.size()) - size_before);
@@ -110,8 +110,7 @@ void Worker::spin() {
         std::vector<int> tmp_vec;
         for (int source = 1; source < options.world_size; ++source) {
           tmp_vec.clear();
-          if (event_comm.recv(tmp_vec, source, MCMPIOptions::Tag::Disable, NULL,
-                              NULL) &&
+          if (event_comm.recv(tmp_vec, source, MCMPIOptions::Tag::Disable) &&
               !tmp_vec.empty()) {
             vec_nb_particles_disabled[source] = tmp_vec[0];
           }
@@ -128,8 +127,7 @@ void Worker::spin() {
         }
       } else {
         std::vector<int> finished_vec;
-        if (event_comm.recv(finished_vec, 0, MCMPIOptions::Tag::Finish, NULL,
-                            NULL)) {
+        if (event_comm.recv(finished_vec, 0, MCMPIOptions::Tag::Finish)) {
           // end of simulation
           flag = false;
         }

@@ -68,8 +68,27 @@ public:
    *
    * \return bool true if data was received, false otherwise
    */
-  bool recv(std::vector<T> &data, int source, int tag, double *times,
-            int *nb_packets);
+  bool recv(std::vector<T> &data, int source, int tag);
+
+  /*!
+   * \function recv_debug
+   *
+   * \brief Like recv but with additional timings inside
+   *
+   * \param[in] data Reference of vector at wich the received data will be
+   * appended at the end
+   * \param[in] source source of the data, can be MPI_ANY_SOURCE
+   * \param[in] tag tag, can be MPI_ANY_TAG
+   * \param[in/out] *times, pointer to array to which timings will be added the
+   * indices correspond to (0 = MPI_Probe, 1 = MPI_Get_Count, 2 = Buffer
+   * Handling, 3 = MPI_Recv, 4 = std::vec copy)
+   * \param[in/out] *nb_packets pointer to int to which the number of packets
+   * (i.e. number of calls to MPI_Recv) will be added
+   *
+   * \return bool true if data was received, false otherwise
+   */
+  bool recv_debug(std::vector<T> &data, int source, int tag, double *times,
+                  int *nb_packets);
 
   // frees up memory in buffer
   void free();

@@ -45,7 +45,7 @@ int main(int argc, char const *argv[]) {
     auto finish = high_resolution_clock::now();
     std::chrono::duration<double, std::milli> elapsed = finish - start;
     cout << "Send: " << elapsed.count() << " ms for " << nb_particles * nb_reps
-         << " particles " << nb_reps << " reps" << endl;
+         << " particles " << nb_reps << " in reps" << endl;
   }
 
   MPI_Barrier(MPI_COMM_WORLD);
@@ -53,35 +53,37 @@ int main(int argc, char const *argv[]) {
   // Recv
   if (world_rank == 1) {
     auto start = high_resolution_clock::now();
-    particle_comm.recv(particles, MPI_ANY_SOURCE, 0, recv_times, &recv_packets);
+    particle_comm.recv_debug(particles, MPI_ANY_SOURCE, 0, recv_times,
+                             &recv_packets);
     auto finish = high_resolution_clock::now();
     std::chrono::duration<double, std::milli> elapsed = finish - start;
     cout << "Recv: " << elapsed.count() << " ms for " << nb_particles * nb_reps
          << " particles in " << nb_reps << " reps" << endl;
-    printf("rank = %d, recv_times = (%f, %f, %f, %f, %f), packets = %d\n",
-           world_rank, recv_times[0], recv_times[1], recv_times[2],
-           recv_times[3], recv_times[4], recv_packets);
+    printf("recv_times = (%f, %f, %f, %f, %f) [secs]\n", recv_times[0],
+           recv_times[1], recv_times[2], recv_times[3], recv_times[4]);
+    printf("recv_times interpretation (0 = MPI_Probe, 1 = MPI_Get_Count, 2 = "
+           "Buffer Handling, 3 = MPI_Recv, 4 = std::vec copy)\n");
   }
   if (world_rank == 0) {
     // master keep busy
-    int j = 31;
-    int k = 17;
+    int k = 13;
     int s = 7;
-
-    for (int i = 0; i < 1000'000'000; ++i) {
-      s = ((s ^ (s % j)) << 1) % k;
+    int upper = 0;
+    if (argc > 1) {
+      upper = atoi(argv[1]);
     }
-    printf("s = %d\n", s);
+    for (int j = 0; j < upper; ++j) {
+      for (int i = 0; i < 1000'000'000; ++i) {
+        s = ((s + (s % k)) << 1);
+      }
+    }
+    // prevent the loop from being optimized out
+    if (s == 1514198968) {
+      printf(" \n");
+    }
   }
 
   MPI_Barrier(MPI_COMM_WORLD);
-  if (world_rank == 0) {
-    cout << "rank = " << world_rank << ", size = " << particles.size() << endl;
-  }
-  MPI_Barrier(MPI_COMM_WORLD);
-  if (world_rank == 1) {
-    cout << "rank = " << world_rank << ", size = " << particles.size() << endl;
-  }
   MPI_Finalize();
   return 0;
 }

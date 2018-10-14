@@ -152,6 +152,16 @@ target_link_libraries(test_layer
   layer
 )
 
+add_executable(test_layer_perf src_test/test_layer_perf.cpp)
+set_target_properties(test_layer_perf PROPERTIES
+  CXX_STANDARD 17
+  CXX_STANDARD_REQUIRED YES
+  CXX_EXTENSIONS NO
+)
+target_link_libraries(test_layer_perf
+  layer
+)
+
 add_executable(test_comm_perf src_test/test_comm_perf.cpp)
 set_target_properties(test_comm_perf PROPERTIES
   CXX_STANDARD 17
