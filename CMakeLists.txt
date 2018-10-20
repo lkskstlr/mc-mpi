@@ -72,6 +72,7 @@ add_library(comm SHARED
   src/async_comm-impl.cpp
   src/async_comm.cpp
   src/particle_comm.cpp
+  src/latched_comm.cpp
 )
 target_include_directories(comm PUBLIC include/comm)
 set_target_properties(comm PROPERTIES
@@ -127,6 +128,16 @@ set_target_properties(test_comm PROPERTIES
   CXX_EXTENSIONS NO
 )
 target_link_libraries(test_comm
+  comm
+)
+
+add_executable(test_latched_comm src_test/test_latched_comm.cpp)
+set_target_properties(test_latched_comm PROPERTIES
+  CXX_STANDARD 17
+  CXX_STANDARD_REQUIRED YES
+  CXX_EXTENSIONS NO
+)
+target_link_libraries(test_latched_comm
   comm
 )
 

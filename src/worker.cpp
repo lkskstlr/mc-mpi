@@ -69,19 +69,31 @@ void Worker::spin() {
 
         particle_comm.send(particles_right, world_rank + 1,
                            MCMPIOptions::Tag::Particle);
+        if (particles_right.size() > 0) {
+          nb_mpi_send++;
+        }
         particles_right.clear();
       } else if (world_rank == options.world_size - 1) {
 
         particle_comm.send(particles_left, world_rank - 1,
                            MCMPIOptions::Tag::Particle);
+        if (particles_left.size() > 0) {
+          nb_mpi_send++;
+        }
         particles_left.clear();
       } else {
 
         particle_comm.send(particles_left, world_rank - 1,
                            MCMPIOptions::Tag::Particle);
+        if (particles_left.size() > 0) {
+          nb_mpi_send++;
+        }
         particles_left.clear();
         particle_comm.send(particles_right, world_rank + 1,
                            MCMPIOptions::Tag::Particle);
+        if (particles_right.size() > 0) {
+          nb_mpi_send++;
+        }
         particles_right.clear();
       }
     }
@@ -90,15 +102,12 @@ void Worker::spin() {
     timer.change(timestamp, Timer::Tag::Recv);
     {
       // recv
-      double start_t = MPI_Wtime();
-      int size_before = static_cast<int>(layer.particles.size());
-      particle_comm.recv_debug(layer.particles, MPI_ANY_SOURCE,
-                               MCMPIOptions::Tag::Particle, recv_times,
-                               &recv_packets);
-      double end_t = MPI_Wtime();
 
-      nb_recv.push_back(static_cast<int>(layer.particles.size()) - size_before);
-      dt_recv.push_back(end_t - start_t);
+      if (particle_comm.recv_debug(layer.particles, MPI_ANY_SOURCE,
+                                   MCMPIOptions::Tag::Particle, recv_times,
+                                   &recv_packets)) {
+        nb_mpi_recv++;
+      }
     }
 
     /* Receive Events */
@@ -112,6 +121,7 @@ void Worker::spin() {
           tmp_vec.clear();
           if (event_comm.recv(tmp_vec, source, MCMPIOptions::Tag::Disable) &&
               !tmp_vec.empty()) {
+            nb_mpi_recv++;
             vec_nb_particles_disabled[source] = tmp_vec[0];
           }
         }
@@ -121,6 +131,8 @@ void Worker::spin() {
           nb_total_disabled += nb;
         }
 
+        // printf("%7d/%7d\n", nb_total_disabled,
+        //        static_cast<int>(options.nb_particles));
         if (nb_total_disabled == options.nb_particles) {
           // end of simulation
           flag = false;
@@ -129,6 +141,7 @@ void Worker::spin() {
         std::vector<int> finished_vec;
         if (event_comm.recv(finished_vec, 0, MCMPIOptions::Tag::Finish)) {
           // end of simulation
+          nb_mpi_recv++;
           flag = false;
         }
       }
@@ -141,6 +154,7 @@ void Worker::spin() {
         if (!flag) {
           for (int i = 1; i < options.world_size; ++i) {
             event_comm.send(1, i, MCMPIOptions::Tag::Finish);
+            nb_mpi_send++;
           }
         }
       } else {
@@ -150,13 +164,13 @@ void Worker::spin() {
         }
         if (nb_particles_disabled > 0) {
           event_comm.send(nb_particles_disabled, 0, MCMPIOptions::Tag::Disable);
+          nb_mpi_send++;
         }
       }
     }
 
     /* Timer State */
     if (timer.time() > timer.starttime() + options.statistics_cycle_time) {
-      // dump
       timer_states.push_back(timer.restart(timestamp, Timer::Tag::Idle));
     }
 
@@ -175,10 +189,6 @@ void Worker::spin() {
   }
 
   timer_states.push_back(timer.stop(timestamp));
-
-  printf("rank = %d, recv_times = (%f, %f, %f, %f, %f) nb_packets = %d\n",
-         world_rank, recv_times[0], recv_times[1], recv_times[2], recv_times[3],
-         recv_times[4], recv_packets);
   return;
 }
 
@@ -188,6 +198,16 @@ void Worker::dump() {
   Timer::State *states = NULL;
 
   gather_times(&total_len, &displs, &states);
+
+  if (world_rank == 0) {
+    MPI_Reduce(MPI_IN_PLACE, &nb_mpi_send, 1, MPI_INT, MPI_SUM, 0,
+               MPI_COMM_WORLD);
+    MPI_Reduce(MPI_IN_PLACE, &nb_mpi_recv, 1, MPI_INT, MPI_SUM, 0,
+               MPI_COMM_WORLD);
+  } else {
+    MPI_Reduce(&nb_mpi_send, NULL, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&nb_mpi_recv, NULL, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+  }
 
   if (world_rank == 0) {
     mkdir_out();
@@ -285,6 +305,9 @@ void Worker::dump_config() {
   char _hostname[1000];
   gethostname(_hostname, 1000);
   yaml_dumper.dump_string("hostname", _hostname);
+
+  yaml_dumper.dump_int("nb_mpi_send", nb_mpi_send);
+  yaml_dumper.dump_int("nb_mpi_recv", nb_mpi_recv);
 }
 
 std::vector<real_t> Worker::weights_absorbed() {
@@ -292,24 +315,36 @@ std::vector<real_t> Worker::weights_absorbed() {
 }
 
 void Worker::mkdir_out() {
-  char filename[100] = "out/times.csv";
-  if (access(filename, F_OK) != -1) {
-    if (remove(filename)) {
-      fprintf(stderr, "Couldn't remove '%s'\n", filename);
-      exit(1);
-    }
-  }
+  // char filename[100] = "out/times.csv";
+  // if (access(filename, F_OK) != -1) {
+  //   if (remove(filename)) {
+  //     fprintf(stderr, "Couldn't remove '%s'\n", filename);
+  //     exit(1);
+  //   }
+  // }
 
-  strncpy(filename, "out/config.yaml", 100);
-  if (access(filename, F_OK) != -1) {
-    if (remove(filename)) {
-      fprintf(stderr, "Couldn't remove '%s'\n", filename);
-      exit(1);
-    }
-  }
+  // strncpy(filename, "out/config.yaml", 100);
+  // if (access(filename, F_OK) != -1) {
+  //   if (remove(filename)) {
+  //     fprintf(stderr, "Couldn't remove '%s'\n", filename);
+  //     exit(1);
+  //   }
+  // }
 
   DIR *dir = opendir("out");
   if (dir) {
+    struct dirent *next_file;
+    char filepath[256];
+
+    while ((next_file = readdir(dir)) != NULL) {
+      if (0 == strcmp(next_file->d_name, ".") ||
+          0 == strcmp(next_file->d_name, "..")) {
+        continue;
+      }
+      sprintf(filepath, "%s/%s", "out", next_file->d_name);
+      remove(filepath);
+    }
+
     closedir(dir);
     if (remove("out")) {
       fprintf(stderr, "Couldn't remove out dir, is it empty?\n");

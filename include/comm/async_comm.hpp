@@ -93,7 +93,7 @@ public:
   // frees up memory in buffer
   void free();
 
-private:
+protected:
   int world_rank;
   std::size_t curr_buffer_size = 0;
   std::size_t max_buffer_size;

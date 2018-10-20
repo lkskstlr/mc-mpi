@@ -79,6 +79,9 @@ private:
 
   std::vector<int> nb_recv;
   std::vector<double> dt_recv;
+
+  int nb_mpi_send = 0;
+  int nb_mpi_recv = 0;
 };
 
 Worker worker_from_config(std::string filepath, int world_size, int world_rank);
