@@ -14,7 +14,7 @@ typedef struct mcmpi_options_tag {
    *
    * \brief MPI send/recv tags
    */
-  enum Tag : int { Particle = 0, Disable, Finish, STATE_COUNT };
+  enum Tag : int { Particle = 0, State, STATE_COUNT };
 
   /* Simulation properties */
   int world_size;         /** number of processes/layers in the simulation */

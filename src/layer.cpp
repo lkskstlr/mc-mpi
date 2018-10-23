@@ -57,8 +57,6 @@ void Layer::create_particles(real_t x_ini, real_t wmc, int n, seed_t *p_seed) {
       particle.seed = rnd_seed(p_seed);
       particle.mu = 2 * rnd_real(&particle.seed) - 1;
 
-      assert(particle.x >= x_min && particle.x <= x_max &&
-             "Particle position should be in layer.");
       assert(particle.index >= 0 &&
              particle.index <= static_cast<int>(x_max / dx) &&
              "Particle index should be in layer.");
@@ -70,8 +68,6 @@ void Layer::create_particles(real_t x_ini, real_t wmc, int n, seed_t *p_seed) {
 }
 
 int Layer::particle_step(Particle &particle) {
-  assert(particle.x >= x_min && particle.x <= x_max &&
-         "Particle position should be in layer at call.");
   assert(particle.index >= index_start && particle.index < index_start + m &&
          "Particle index should be in layer at call.");
 

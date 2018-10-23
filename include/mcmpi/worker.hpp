@@ -5,6 +5,7 @@
 #include "mcmpi_options.hpp"
 #include "particle.hpp"
 #include "particle_comm.hpp"
+#include "state_comm.hpp"
 #include "timer.hpp"
 #include "types.hpp"
 #include <string>
@@ -59,29 +60,22 @@ public:
   Layer layer;
   ParticleComm particle_comm;
   std::vector<Particle> particles_left, particles_right, particles_disabled;
-  AsyncComm<int> event_comm;
+  StateComm state_comm;
 
   Timer timer;
   std::vector<Timer::State> timer_states;
-  MPI_Datatype timer_state_mpi_t;
+  std::vector<Stats::State> stats_states;
+  std::vector<int> cycle_states;
 
 private:
-  void gather_times(int *total_len, int **displs, Timer::State **states);
+  void write_file(char *filename);
   void gather_weights_absorbed(int *total_len, int **displs, real_t **weights);
   void mkdir_out();
   void dump_config();
-  void dump_times(int total_len, int const *displs, Timer::State const *states);
-  void dump_recv_times();
   void dump_weights_absorbed(int total_len, int const *displs,
                              real_t const *weights);
 
   unsigned long unix_timestamp_start;
-
-  std::vector<int> nb_recv;
-  std::vector<double> dt_recv;
-
-  int nb_mpi_send = 0;
-  int nb_mpi_recv = 0;
 };
 
 Worker worker_from_config(std::string filepath, int world_size, int world_rank);

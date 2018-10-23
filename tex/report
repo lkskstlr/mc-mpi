@@ -11,6 +11,7 @@ import numpy as np
 import importlib
 import sys
 import yaml
+import pandas as pd
 
 
 def is_valid_file(parser, arg):
@@ -43,11 +44,19 @@ def read_data(filename):
             print(exc)
     
 
-    times = np.genfromtxt("build/out/times.csv", skip_header=1, delimiter=',')
-    times[:, 2] -= times[0, 1]
-    times[:, 1] -= times[0, 1]
+    # times = np.genfromtxt("build/out/times.csv", skip_header=1, delimiter=',')
+    # times[:, 2] -= times[0, 1]
+    # times[:, 1] -= times[0, 1]
 
-    data["times"] = times
+    # data["times"] = times
+    df = pd.read_csv("build/out/stats.csv", skipinitialspace=True)
+    df = df.drop('Unnamed: 10', axis= 1)
+    time_min = df['starttime'].min()
+    df['starttime'] -= time_min
+    df['endtime'] -= time_min
+
+    data['df'] = df
+    data['world_size'] = df['rank'].max()+1
 
     data["nb_cells"] = data["nb_cells_per_layer"] * data["world_size"]
     return data

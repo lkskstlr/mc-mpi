@@ -4,6 +4,7 @@
 #include <chrono>
 #include <cstring>
 #include <dirent.h>
+#include <numeric>
 #include <stdio.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -19,7 +20,15 @@ Worker::Worker(int world_rank, const MCMPIOptions &options)
                              options.world_size, world_rank,
                              options.nb_cells_per_layer, options.nb_particles,
                              options.particle_min_weight)),
-      particle_comm(world_rank, options.buffer_size) {
+      particle_comm(world_rank, options.buffer_size),
+      state_comm(options.world_size, world_rank, MCMPIOptions::Tag::State,
+                 [nb_particles = options.nb_particles](std::vector<int> msgs) {
+                   int sum = std::accumulate(msgs.begin(), msgs.end(), 0);
+                   if (sum == nb_particles) {
+                     return StateComm::State::Finished;
+                   }
+                   return StateComm::State::Running;
+                 }) {
 
   /* Time */
   if (world_rank == 0) {
@@ -27,13 +36,8 @@ Worker::Worker(int world_rank, const MCMPIOptions &options)
   }
   /* reserve */
   timer_states.reserve(100);
-
-  /* Commit Timer::State Type */
-  timer_state_mpi_t = Timer::State::mpi_t();
-  MPI_Type_commit(&timer_state_mpi_t);
-
-  /* Event as int */
-  event_comm.init(world_rank, MPI_INT, options.buffer_size);
+  stats_states.reserve(100);
+  cycle_states.reserve(100);
 }
 
 void Worker::spin() {
@@ -48,10 +52,8 @@ void Worker::spin() {
     vec_nb_particles_disabled = std::vector<int>(options.world_size, 0);
   }
 
-  double recv_times[5] = {0.0};
-  int recv_packets = 0;
-
   bool flag = true;
+  int nb_cycles_stats = 0;
   while (flag) {
     start = high_resolution_clock::now();
 
@@ -60,118 +62,60 @@ void Worker::spin() {
     {
       layer.simulate(options.cycle_nb_steps, particles_left, particles_right,
                      particles_disabled);
+
+      if (world_rank == 0) {
+        particles_disabled.insert(particles_disabled.end(),
+                                  particles_left.begin(), particles_left.end());
+        particles_left.clear();
+      }
+      if (world_rank == options.world_size - 1) {
+        particles_disabled.insert(particles_disabled.end(),
+                                  particles_right.begin(),
+                                  particles_right.end());
+        particles_right.clear();
+      }
     }
 
     /* Sending Particles */
     timer.change(timestamp, Timer::Tag::Send);
     {
-      if (world_rank == 0) {
-
-        particle_comm.send(particles_right, world_rank + 1,
-                           MCMPIOptions::Tag::Particle);
-        if (particles_right.size() > 0) {
-          nb_mpi_send++;
-        }
-        particles_right.clear();
-      } else if (world_rank == options.world_size - 1) {
-
-        particle_comm.send(particles_left, world_rank - 1,
-                           MCMPIOptions::Tag::Particle);
-        if (particles_left.size() > 0) {
-          nb_mpi_send++;
-        }
-        particles_left.clear();
-      } else {
-
-        particle_comm.send(particles_left, world_rank - 1,
-                           MCMPIOptions::Tag::Particle);
-        if (particles_left.size() > 0) {
-          nb_mpi_send++;
-        }
-        particles_left.clear();
-        particle_comm.send(particles_right, world_rank + 1,
-                           MCMPIOptions::Tag::Particle);
-        if (particles_right.size() > 0) {
-          nb_mpi_send++;
-        }
-        particles_right.clear();
-      }
+      particle_comm.send(particles_left, world_rank - 1,
+                         MCMPIOptions::Tag::Particle);
+      particle_comm.send(particles_right, world_rank + 1,
+                         MCMPIOptions::Tag::Particle);
     }
 
     /* Receive Particles */
     timer.change(timestamp, Timer::Tag::Recv);
     {
       // recv
-
-      if (particle_comm.recv_debug(layer.particles, MPI_ANY_SOURCE,
-                                   MCMPIOptions::Tag::Particle, recv_times,
-                                   &recv_packets)) {
-        nb_mpi_recv++;
-      }
-    }
-
-    /* Receive Events */
-    timer.change(timestamp, Timer::Tag::Recv);
-    {
-      if (world_rank == 0) {
-        vec_nb_particles_disabled[0] = particles_left.size();
-
-        std::vector<int> tmp_vec;
-        for (int source = 1; source < options.world_size; ++source) {
-          tmp_vec.clear();
-          if (event_comm.recv(tmp_vec, source, MCMPIOptions::Tag::Disable) &&
-              !tmp_vec.empty()) {
-            nb_mpi_recv++;
-            vec_nb_particles_disabled[source] = tmp_vec[0];
-          }
-        }
-
-        int nb_total_disabled = 0;
-        for (auto nb : vec_nb_particles_disabled) {
-          nb_total_disabled += nb;
-        }
-
-        // printf("%7d/%7d\n", nb_total_disabled,
-        //        static_cast<int>(options.nb_particles));
-        if (nb_total_disabled == options.nb_particles) {
-          // end of simulation
-          flag = false;
-        }
-      } else {
-        std::vector<int> finished_vec;
-        if (event_comm.recv(finished_vec, 0, MCMPIOptions::Tag::Finish)) {
-          // end of simulation
-          nb_mpi_recv++;
-          flag = false;
-        }
-      }
+      particle_comm.recv(layer.particles, MPI_ANY_SOURCE,
+                         MCMPIOptions::Tag::Particle);
     }
 
     /* Send Events */
     timer.change(timestamp, Timer::Tag::Send);
     {
-      if (world_rank == 0) {
-        if (!flag) {
-          for (int i = 1; i < options.world_size; ++i) {
-            event_comm.send(1, i, MCMPIOptions::Tag::Finish);
-            nb_mpi_send++;
-          }
-        }
-      } else {
-        int nb_particles_disabled = particles_disabled.size();
-        if (world_rank == options.world_size - 1) {
-          nb_particles_disabled += particles_right.size();
-        }
-        if (nb_particles_disabled > 0) {
-          event_comm.send(nb_particles_disabled, 0, MCMPIOptions::Tag::Disable);
-          nb_mpi_send++;
-        }
+      state_comm.send_msg(particles_disabled.size());
+      state_comm.send_state();
+    }
+
+    /* Receive Events */
+    timer.change(timestamp, Timer::Tag::Recv);
+    {
+      if (state_comm.recv_state() == StateComm::State::Finished) {
+        flag = false;
+        break;
       }
     }
 
     /* Timer State */
     if (timer.time() > timer.starttime() + options.statistics_cycle_time) {
       timer_states.push_back(timer.restart(timestamp, Timer::Tag::Idle));
+      stats_states.push_back(particle_comm.reset_stats() +
+                             state_comm.reset_stats());
+      cycle_states.push_back(nb_cycles_stats);
+      nb_cycles_stats = 0;
     }
 
     /* Idle */
@@ -186,71 +130,88 @@ void Worker::spin() {
         std::this_thread::sleep_for(sleep_length);
       }
     }
+
+    nb_cycles_stats++;
   }
 
   timer_states.push_back(timer.stop(timestamp));
+  stats_states.push_back(particle_comm.reset_stats() +
+                         state_comm.reset_stats());
+  cycle_states.push_back(nb_cycles_stats);
   return;
 }
 
 void Worker::dump() {
-  int total_len = 0;
-  int *displs = NULL;
-  Timer::State *states = NULL;
-
-  gather_times(&total_len, &displs, &states);
-
-  if (world_rank == 0) {
-    MPI_Reduce(MPI_IN_PLACE, &nb_mpi_send, 1, MPI_INT, MPI_SUM, 0,
-               MPI_COMM_WORLD);
-    MPI_Reduce(MPI_IN_PLACE, &nb_mpi_recv, 1, MPI_INT, MPI_SUM, 0,
-               MPI_COMM_WORLD);
-  } else {
-    MPI_Reduce(&nb_mpi_send, NULL, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
-    MPI_Reduce(&nb_mpi_recv, NULL, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
-  }
 
   if (world_rank == 0) {
     mkdir_out();
 
     dump_config();
-    dump_times(total_len, displs, states);
   }
 
-  free(displs);
-  free(states);
+  write_file((char *)"out/stats.csv");
 
   MPI_Barrier(MPI_COMM_WORLD);
-  dump_recv_times();
 }
 
-void Worker::gather_times(int *total_len, int **displs, Timer::State **states) {
+void Worker::write_file(char *filename) {
+  using std::size_t;
+  // write times
+  size_t max_len = static_cast<size_t>(Timer::State::sprintf_max_len()) *
+                       (timer_states.size() + 1) +
+                   static_cast<size_t>(Stats::State::sprintf_max_len()) *
+                       (stats_states.size() + 1) +
+                   10 * (stats_states.size() + 1) + 1000;
+
+  char *buf = (char *)malloc(max_len);
+  int offset = 0;
+
+  if (world_rank == 0) {
+    offset += sprintf(buf + offset, "rank, ");
+    offset += Timer::State::sprintf_header(buf + offset);
+    offset += Stats::State::sprintf_header(buf + offset);
+    offset += sprintf(buf + offset, "nb_cycles, \n");
+  }
+
+  for (int i = 0; i < timer_states.size(); ++i) {
+    offset += sprintf(buf + offset, "%d, ", world_rank);
+    offset += timer_states[i].sprintf(buf + offset);
+    offset += stats_states[i].sprintf(buf + offset);
+    offset += sprintf(buf + offset, "%d, \n", cycle_states[i]);
+  }
+
+  if (offset >= max_len) {
+    fprintf(stderr, "Abort in Worker::write_file");
+    MPI_Abort(MPI_COMM_WORLD, 1);
+  }
+
   int *recvcounts = NULL;
+  recvcounts = (int *)malloc(options.world_size * sizeof(int));
 
-  if (world_rank == 0) {
-    recvcounts = (int *)malloc(options.world_size * sizeof(int));
+  MPI_Allgather(&offset, 1, MPI_INT, recvcounts, 1, MPI_INT, MPI_COMM_WORLD);
+
+  int totlen = 0;
+  int *displs = NULL;
+
+  displs = (int *)malloc(options.world_size * sizeof(int));
+
+  displs[0] = 0;
+  totlen += recvcounts[0] + 1;
+
+  for (int i = 1; i < options.world_size; i++) {
+    totlen += recvcounts[i];
+    displs[i] = displs[i - 1] + recvcounts[i - 1];
   }
 
-  int my_len = static_cast<int>(timer_states.size());
-  MPI_Gather(&my_len, 1, MPI_INT, recvcounts, 1, MPI_INT, 0, MPI_COMM_WORLD);
+  // Write to collective file
+  MPI_File file;
+  MPI_File_open(MPI_COMM_WORLD, filename, MPI_MODE_WRONLY | MPI_MODE_CREATE,
+                MPI_INFO_NULL, &file);
 
-  *total_len = 0;
+  MPI_File_write_at(file, displs[world_rank], buf, offset, MPI_CHAR,
+                    MPI_STATUS_IGNORE);
 
-  if (world_rank == 0) {
-    *displs = (int *)malloc(options.world_size * sizeof(int));
-
-    (*displs)[0] = 0;
-    *total_len += recvcounts[0];
-
-    for (int i = 1; i < options.world_size; i++) {
-      *total_len += recvcounts[i];
-      (*displs)[i] = (*displs)[i - 1] + recvcounts[i - 1];
-    }
-
-    *states = (Timer::State *)malloc((*total_len) * sizeof(Timer::State));
-  }
-
-  MPI_Gatherv(timer_states.data(), my_len, timer_state_mpi_t, *states,
-              recvcounts, *displs, timer_state_mpi_t, 0, MPI_COMM_WORLD);
+  MPI_File_close(&file);
 }
 
 void Worker::gather_weights_absorbed(int *total_len, int **displs,
@@ -305,9 +266,6 @@ void Worker::dump_config() {
   char _hostname[1000];
   gethostname(_hostname, 1000);
   yaml_dumper.dump_string("hostname", _hostname);
-
-  yaml_dumper.dump_int("nb_mpi_send", nb_mpi_send);
-  yaml_dumper.dump_int("nb_mpi_recv", nb_mpi_recv);
 }
 
 std::vector<real_t> Worker::weights_absorbed() {
@@ -315,22 +273,6 @@ std::vector<real_t> Worker::weights_absorbed() {
 }
 
 void Worker::mkdir_out() {
-  // char filename[100] = "out/times.csv";
-  // if (access(filename, F_OK) != -1) {
-  //   if (remove(filename)) {
-  //     fprintf(stderr, "Couldn't remove '%s'\n", filename);
-  //     exit(1);
-  //   }
-  // }
-
-  // strncpy(filename, "out/config.yaml", 100);
-  // if (access(filename, F_OK) != -1) {
-  //   if (remove(filename)) {
-  //     fprintf(stderr, "Couldn't remove '%s'\n", filename);
-  //     exit(1);
-  //   }
-  // }
-
   DIR *dir = opendir("out");
   if (dir) {
     struct dirent *next_file;
@@ -360,51 +302,32 @@ void Worker::mkdir_out() {
   mkdir("out", S_IRWXU | S_IRWXG | S_IRWXO);
 }
 
-void Worker::dump_times(int total_len, int const *displs,
-                        Timer::State const *states) {
-  FILE *file;
-  file = fopen("out/times.csv", "w");
-  if (!file) {
-    fprintf(stderr, "Couldn't open file out/times.csv for writing.\n");
-    exit(1);
-  }
+// void Worker::dump_stats(int total_len, int const *displs,
+//                         Timer::State const *states) {
+//   FILE *file;
+//   file = fopen("out/times.csv", "w");
+//   if (!file) {
+//     fprintf(stderr, "Couldn't open file out/times.csv for writing.\n");
+//     exit(1);
+//   }
 
-  fprintf(file, "proc, starttime, endtime, state_comp, state_send, "
-                "state_recv, state_idle\n");
-  int proc = 0;
-  for (int i = 0; i < total_len; ++i) {
-    if (proc < options.world_size - 1 && displs[proc + 1] == i) {
-      proc++;
-    }
-    fprintf(file, "%d, %.18e, %.18e, %.18e, %.18e, %.18e, %.18e\n", proc,
-            states[i].starttime, states[i].endtime,
-            states[i].cumm_times[Timer::Tag::Computation],
-            states[i].cumm_times[Timer::Tag::Send],
-            states[i].cumm_times[Timer::Tag::Recv],
-            states[i].cumm_times[Timer::Tag::Idle]);
-  }
+//   fprintf(file, "proc, starttime, endtime, state_comp, state_send, "
+//                 "state_recv, state_idle\n");
+//   int proc = 0;
+//   for (int i = 0; i < total_len; ++i) {
+//     if (proc < options.world_size - 1 && displs[proc + 1] == i) {
+//       proc++;
+//     }
+//     fprintf(file, "%d, %.18e, %.18e, %.18e, %.18e, %.18e, %.18e\n", proc,
+//             states[i].starttime, states[i].endtime,
+//             states[i].cumm_times[Timer::Tag::Computation],
+//             states[i].cumm_times[Timer::Tag::Send],
+//             states[i].cumm_times[Timer::Tag::Recv],
+//             states[i].cumm_times[Timer::Tag::Idle]);
+//   }
 
-  fclose(file);
-}
-
-void Worker::dump_recv_times() {
-  FILE *file;
-  char filename[100];
-  sprintf(filename, "out/recv_times_%d.csv", world_rank);
-  file = fopen(filename, "w");
-  if (!file) {
-    fprintf(stderr, "Couldn't open file %s for writing.\n", filename);
-    exit(1);
-  }
-
-  fprintf(file, "nb, dt\n");
-  int proc = 0;
-  for (int i = 0; i < nb_recv.size(); ++i) {
-    fprintf(file, "%d, %.18e\n", nb_recv[i], dt_recv[i]);
-  }
-
-  fclose(file);
-}
+//   fclose(file);
+// }
 
 void Worker::dump_weights_absorbed(int total_len, int const *displs,
                                    real_t const *weights) {

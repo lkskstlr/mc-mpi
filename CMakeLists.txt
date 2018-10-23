@@ -69,10 +69,11 @@ target_link_libraries(layer PUBLIC types)
 
 
 add_library(comm SHARED
+  src/stats.cpp
   src/async_comm-impl.cpp
   src/async_comm.cpp
   src/particle_comm.cpp
-  src/latched_comm.cpp
+  src/state_comm.cpp
 )
 target_include_directories(comm PUBLIC include/comm)
 set_target_properties(comm PROPERTIES
@@ -131,13 +132,13 @@ target_link_libraries(test_comm
   comm
 )
 
-add_executable(test_latched_comm src_test/test_latched_comm.cpp)
-set_target_properties(test_latched_comm PROPERTIES
+add_executable(test_state_comm src_test/test_state_comm.cpp)
+set_target_properties(test_state_comm PROPERTIES
   CXX_STANDARD 17
   CXX_STANDARD_REQUIRED YES
   CXX_EXTENSIONS NO
 )
-target_link_libraries(test_latched_comm
+target_link_libraries(test_state_comm
   comm
 )
 

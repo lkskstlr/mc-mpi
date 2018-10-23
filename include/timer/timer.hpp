@@ -7,6 +7,7 @@
 
 #include <iostream>
 #include <mpi.h>
+#include <stdio.h>
 
 class Timer {
 public:
@@ -21,6 +22,9 @@ public:
     double starttime = 0.0;
     double endtime = 0.0;
 
+    int sprintf(char *str);
+    static int sprintf_header(char *str);
+    static int sprintf_max_len();
     static MPI_Datatype mpi_t();
   } State;
 

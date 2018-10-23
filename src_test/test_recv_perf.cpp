@@ -30,9 +30,6 @@ int main(int argc, char const *argv[]) {
     }
   }
 
-  double recv_times[5] = {0.0};
-  int recv_packets = 0;
-
   ParticleComm particle_comm(world_rank, buffer_size);
 
   MPI_Barrier(MPI_COMM_WORLD);
@@ -53,16 +50,11 @@ int main(int argc, char const *argv[]) {
   // Recv
   if (world_rank == 1) {
     auto start = high_resolution_clock::now();
-    particle_comm.recv_debug(particles, MPI_ANY_SOURCE, 0, recv_times,
-                             &recv_packets);
+    particle_comm.recv(particles, MPI_ANY_SOURCE, 0);
     auto finish = high_resolution_clock::now();
     std::chrono::duration<double, std::milli> elapsed = finish - start;
     cout << "Recv: " << elapsed.count() << " ms for " << nb_particles * nb_reps
          << " particles in " << nb_reps << " reps" << endl;
-    printf("recv_times = (%f, %f, %f, %f, %f) [secs]\n", recv_times[0],
-           recv_times[1], recv_times[2], recv_times[3], recv_times[4]);
-    printf("recv_times interpretation (0 = MPI_Probe, 1 = MPI_Get_Count, 2 = "
-           "Buffer Handling, 3 = MPI_Recv, 4 = std::vec copy)\n");
   }
   if (world_rank == 0) {
     // master keep busy

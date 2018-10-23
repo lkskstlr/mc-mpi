@@ -1,6 +1,7 @@
 #ifndef ASYNC_COMM_HPP
 #define ASYNC_COMM_HPP
 
+#include "stats.hpp"
 #include <mpi.h>
 #include <stdio.h>
 #include <vector>
@@ -35,13 +36,13 @@ public:
    *
    * \brief Stores data in buffer and sends it when possible
    *
-   * \param[in] data Reference of vector with data to be sent
+   * \param[in] data Reference of vector with data to be sent. WILL BE CLEARED!
    * \param[in] dest Destination
    * \param[in] tag tag, can be MPI_ANY_TAG
    *
    * \return void
    */
-  void send(std::vector<T> const &data, int dest, int tag);
+  void send(std::vector<T> &data, int dest, int tag);
 
   /*!
    * \function send
@@ -71,24 +72,13 @@ public:
   bool recv(std::vector<T> &data, int source, int tag);
 
   /*!
-   * \function recv_debug
+   * \function reset_stats
    *
-   * \brief Like recv but with additional timings inside
+   * \brief Will reset the internal statistics and return the old ones
    *
-   * \param[in] data Reference of vector at wich the received data will be
-   * appended at the end
-   * \param[in] source source of the data, can be MPI_ANY_SOURCE
-   * \param[in] tag tag, can be MPI_ANY_TAG
-   * \param[in/out] *times, pointer to array to which timings will be added the
-   * indices correspond to (0 = MPI_Probe, 1 = MPI_Get_Count, 2 = Buffer
-   * Handling, 3 = MPI_Recv, 4 = std::vec copy)
-   * \param[in/out] *nb_packets pointer to int to which the number of packets
-   * (i.e. number of calls to MPI_Recv) will be added
-   *
-   * \return bool true if data was received, false otherwise
+   * \return Stats::State returns the old Stats::State
    */
-  bool recv_debug(std::vector<T> &data, int source, int tag, double *times,
-                  int *nb_packets);
+  Stats::State reset_stats();
 
   // frees up memory in buffer
   void free();
@@ -100,5 +90,7 @@ protected:
 
   MPI_Datatype mpi_t;
   std::vector<SendInfo> send_infos;
+
+  Stats stats;
 };
 #endif

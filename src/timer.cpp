@@ -17,6 +17,20 @@ MPI_Datatype Timer::State::mpi_t() {
   return mpi_state_type;
 }
 
+int Timer::State::sprintf(char *str) {
+  return ::sprintf(str, "%.18e, %.18e, %.18e, %.18e, %.18e, %.18e, ", starttime,
+                   endtime, cumm_times[Timer::Tag::Computation],
+                   cumm_times[Timer::Tag::Send], cumm_times[Timer::Tag::Recv],
+                   cumm_times[Timer::Tag::Idle]);
+}
+
+int Timer::State::sprintf_header(char *str) {
+  return ::sprintf(str, "%s, %s, %s, %s, %s, %s, ", "starttime", "endtime",
+                   "time_comp", "time_send", "time_recv", "time_idle");
+}
+
+int Timer::State::sprintf_max_len() { return 6 * 30; }
+
 Timer::Timestamp Timer::start(Tag tag) {
   state.starttime = MPI_Wtime();
   return {tag, state.starttime};
