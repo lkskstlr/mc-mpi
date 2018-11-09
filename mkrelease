@@ -10,6 +10,7 @@ cp -r src $folder
 cp -r src_test $folder
 mkdir -p $folder/tex
 cp -r tex/templates $folder/tex
+cp -r tex/data $folder/tex
 cp tex/commands.jinja.tex $folder/tex
 cp tex/header.jinja.tex $folder/tex
 cp tex/packages.jinja.tex $folder/tex
