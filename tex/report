@@ -58,6 +58,9 @@ def read_data(filename):
     data['df'] = df
     data['world_size'] = df['rank'].max()+1
 
+    data['df_w'] = pd.read_csv("build/out/weights.csv", skipinitialspace=True)
+    data['data_w'] = np.genfromtxt('data/WA_1000_1000000.out', delimiter=' ')
+
     data["nb_cells"] = data["nb_cells_per_layer"] * data["world_size"]
     return data
 

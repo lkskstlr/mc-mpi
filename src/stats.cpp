@@ -1,4 +1,5 @@
 #include "stats.hpp"
+#include <algorithm>
 #include <mpi.h>
 #include <string>
 
@@ -41,3 +42,9 @@ Stats::State Stats::reset() {
 }
 
 void Stats::increment(MPI mpi) { state.nb_mpi[mpi]++; }
+
+void Stats::buffer_size(size_t size) {
+  max_buffer_size = std::max(max_buffer_size, size);
+}
+
+size_t Stats::get_max_buffer_size() const { return max_buffer_size; }

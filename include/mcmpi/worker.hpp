@@ -71,7 +71,7 @@ private:
   void write_file(char *filename);
   void gather_weights_absorbed(int *total_len, int **displs, real_t **weights);
   void mkdir_out();
-  void dump_config();
+  void dump_config(int max_used_buffer);
   void dump_weights_absorbed(int total_len, int const *displs,
                              real_t const *weights);
 

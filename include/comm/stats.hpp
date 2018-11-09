@@ -25,9 +25,12 @@ public:
   State reset();
 
   void increment(MPI mpi);
+  void buffer_size(size_t size);
+  size_t get_max_buffer_size() const;
 
 private:
   State state;
+  size_t max_buffer_size = 0;
 };
 
 #endif

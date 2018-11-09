@@ -12,8 +12,6 @@
 #include <time.h>
 #include <unistd.h>
 
-using std::size_t;
-
 Worker::Worker(int world_rank, const MCMPIOptions &options)
     : world_rank(world_rank), options(options),
       layer(decompose_domain(options.x_min, options.x_max, options.x_ini,
@@ -142,11 +140,24 @@ void Worker::spin() {
 }
 
 void Worker::dump() {
+  int total_len = 0;
+  int *displs = NULL;
+  real_t *weights = NULL;
+
+  gather_weights_absorbed(&total_len, &displs, &weights);
+
+  // Max Used Buffersize
+  unsigned long max_used_buffer = particle_comm.get_max_used_buffer();
+  unsigned long max_used_buffer_global;
+  MPI_Reduce(&max_used_buffer, &max_used_buffer_global, 1,
+             MPI_UNSIGNED_LONG_LONG, MPI_MAX, 0, MPI_COMM_WORLD);
 
   if (world_rank == 0) {
     mkdir_out();
 
-    dump_config();
+    dump_config(max_used_buffer_global);
+    dump_weights_absorbed(total_len, displs, weights);
+    layer.dump_WA();
   }
 
   write_file((char *)"out/stats.csv");
@@ -155,7 +166,6 @@ void Worker::dump() {
 }
 
 void Worker::write_file(char *filename) {
-  using std::size_t;
   // write times
   size_t max_len = static_cast<size_t>(Timer::State::sprintf_max_len()) *
                        (timer_states.size() + 1) +
@@ -245,7 +255,7 @@ void Worker::gather_weights_absorbed(int *total_len, int **displs,
               recvcounts, *displs, MCMPI_REAL_T, 0, MPI_COMM_WORLD);
 }
 
-void Worker::dump_config() {
+void Worker::dump_config(int max_used_buffer) {
   YamlDumper yaml_dumper("out/config.yaml");
   yaml_dumper.comment("Read from config");
   yaml_dumper.dump_int("nb_cells_per_layer", options.nb_cells_per_layer);
@@ -266,6 +276,7 @@ void Worker::dump_config() {
   char _hostname[1000];
   gethostname(_hostname, 1000);
   yaml_dumper.dump_string("hostname", _hostname);
+  yaml_dumper.dump_int("max_used_buffer", max_used_buffer);
 }
 
 std::vector<real_t> Worker::weights_absorbed() {
@@ -345,7 +356,8 @@ void Worker::dump_weights_absorbed(int total_len, int const *displs,
     if (proc < options.world_size - 1 && displs[proc + 1] == i) {
       proc++;
     }
-    fprintf(file, "%d, %.18e, %.18e\n", proc, 0.1, 0.1);
+    fprintf(file, "%d, %.18e, %.18e\n", proc, layer.dx * (i + 0.5),
+            weights[i] / layer.dx);
   }
 
   fclose(file);

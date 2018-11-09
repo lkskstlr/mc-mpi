@@ -11,7 +11,7 @@ template <typename T> class AsyncComm {
   /* Only needed inside class */
   typedef struct send_info_tag {
     void *buf;
-    std::size_t bytes;
+    size_t bytes;
     MPI_Request request;
   } SendInfo;
 
@@ -28,8 +28,7 @@ public:
    * class
    * \param[in] max_buffer_size maximum size of internal buffer in bytes
    */
-  void init(int world_rank, MPI_Datatype const mpi_t,
-            std::size_t max_buffer_size);
+  void init(int world_rank, MPI_Datatype const mpi_t, size_t max_buffer_size);
 
   /*!
    * \function send
@@ -80,13 +79,15 @@ public:
    */
   Stats::State reset_stats();
 
+  size_t get_max_used_buffer() const;
+
   // frees up memory in buffer
   void free();
 
 protected:
   int world_rank;
-  std::size_t curr_buffer_size = 0;
-  std::size_t max_buffer_size;
+  size_t curr_buffer_size = 0;
+  size_t max_buffer_size;
 
   MPI_Datatype mpi_t;
   std::vector<SendInfo> send_infos;

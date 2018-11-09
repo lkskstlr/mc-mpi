@@ -4,7 +4,6 @@
 #include <stdio.h>
 #include <thread>
 
-using std::size_t;
 using std::chrono::high_resolution_clock;
 
 int main(int argc, char const *argv[]) {

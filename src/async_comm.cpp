@@ -6,7 +6,7 @@
 
 template <typename T>
 void AsyncComm<T>::init(int world_rank, MPI_Datatype const mpi_t,
-                        std::size_t max_buffer_size) {
+                        size_t max_buffer_size) {
   constexpr int send_info_initial_reserve = 256;
   this->world_rank = world_rank;
   this->mpi_t = mpi_t;
@@ -49,6 +49,7 @@ void AsyncComm<T>::send(std::vector<T> &data, int dest, int tag) {
   stats.increment(Stats::MPI::Send);
 
   curr_buffer_size += send_info.bytes;
+  stats.buffer_size(curr_buffer_size);
   send_infos.push_back(send_info);
 
   data.clear();
@@ -86,6 +87,7 @@ void AsyncComm<T>::send(T const &instance, int dest, int tag) {
   stats.increment(Stats::MPI::Send);
 
   curr_buffer_size += send_info.bytes;
+  stats.buffer_size(curr_buffer_size);
   send_infos.push_back(send_info);
 }
 
@@ -96,9 +98,9 @@ bool AsyncComm<T>::recv(std::vector<T> &data, int source, int tag) {
   int nb_data = -1;
   int factor = 2;
   char *buf = NULL;
-  std::size_t buf_size = 0;
-  std::size_t buf_used = 0;
-  std::size_t new_bytes = 0;
+  size_t buf_size = 0;
+  size_t buf_used = 0;
+  size_t new_bytes = 0;
 
   do {
     // Probe
@@ -116,7 +118,7 @@ bool AsyncComm<T>::recv(std::vector<T> &data, int source, int tag) {
       } else {
         if (buf_used + new_bytes > buf_size) {
           // enlarge
-          std::size_t new_size =
+          size_t new_size =
               std::max(factor * buf_size, buf_size + factor * new_bytes);
           buf = (char *)realloc(buf, new_size);
           if (!buf) {
@@ -136,7 +138,7 @@ bool AsyncComm<T>::recv(std::vector<T> &data, int source, int tag) {
   } while (flag);
 
   data.reserve(data.size() + buf_used / sizeof(T));
-  for (std::size_t i = 0; i < buf_used / sizeof(T); ++i) {
+  for (size_t i = 0; i < buf_used / sizeof(T); ++i) {
     data.push_back(((T *)buf)[i]);
   }
 
@@ -167,4 +169,8 @@ template <typename T> void AsyncComm<T>::free() {
 
 template <typename T> Stats::State AsyncComm<T>::reset_stats() {
   return stats.reset();
+}
+
+template <typename T> size_t AsyncComm<T>::get_max_used_buffer() const {
+  return stats.get_max_buffer_size();
 }

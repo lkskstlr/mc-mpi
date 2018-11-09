@@ -6,6 +6,6 @@
 
 class ParticleComm : public AsyncComm<Particle> {
 public:
-  ParticleComm(int world_rank, std::size_t max_buffer_size);
+  ParticleComm(int world_rank, size_t max_buffer_size);
 };
 #endif

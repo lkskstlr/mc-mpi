@@ -23,10 +23,10 @@ typedef struct mcmpi_options_tag {
       x_ini; /** x_min, x_max and x_ini of the global simulation */
 
   real_t particle_min_weight; /** If weight < ... the particle is disabled */
-  std::size_t nb_particles;   /** total number of particles in the simulation */
+  size_t nb_particles;        /** total number of particles in the simulation */
 
   /* Performance properties */
-  std::size_t buffer_size; /** buffer size in bytes of the async_comm send
+  size_t buffer_size; /** buffer size in bytes of the async_comm send
                               buffer. Higher is better, e.g. 1024*1024 */
   double cycle_time;  /** Each worker tries to complete one cycle in cycle time
                          seconds */
