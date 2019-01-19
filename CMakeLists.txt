@@ -35,7 +35,7 @@ add_library(yaml SHARED
 )
 target_include_directories(yaml PUBLIC include/yaml)
 set_target_properties(yaml PROPERTIES
-  CXX_STANDARD 17
+  CXX_STANDARD 11
   CXX_STANDARD_REQUIRED YES
   CXX_EXTENSIONS NO
 )
@@ -46,7 +46,7 @@ add_library(timer SHARED
 )
 target_include_directories(timer PUBLIC include/timer)
 set_target_properties(timer PROPERTIES
-  CXX_STANDARD 17
+  CXX_STANDARD 11
   CXX_STANDARD_REQUIRED YES
   CXX_EXTENSIONS NO
 )
@@ -61,7 +61,7 @@ add_library(layer SHARED src/layer.cpp src/random.cpp)
 target_include_directories(layer PUBLIC include/layer)
 target_include_directories(layer PRIVATE include/layer/private)
 set_target_properties(layer PROPERTIES
-  CXX_STANDARD 17
+  CXX_STANDARD 11
   CXX_STANDARD_REQUIRED YES
   CXX_EXTENSIONS NO
 )
@@ -77,7 +77,7 @@ add_library(comm SHARED
 )
 target_include_directories(comm PUBLIC include/comm)
 set_target_properties(comm PROPERTIES
-  CXX_STANDARD 17
+  CXX_STANDARD 11
   CXX_STANDARD_REQUIRED YES
   CXX_EXTENSIONS NO
 )
@@ -87,7 +87,7 @@ target_link_libraries(comm PUBLIC types)
 add_library(mcmpi SHARED src/worker.cpp)
 target_include_directories(mcmpi PUBLIC include/mcmpi)
 set_target_properties(mcmpi PROPERTIES
-  CXX_STANDARD 17
+  CXX_STANDARD 11
   CXX_STANDARD_REQUIRED YES
   CXX_EXTENSIONS NO
 )
@@ -111,7 +111,7 @@ configure_file(scripts/save_run save_run COPYONLY)
 ########## Programs ##########
 add_executable(main src/main.cpp)
 set_target_properties(main PROPERTIES
-  CXX_STANDARD 17
+  CXX_STANDARD 11
   CXX_STANDARD_REQUIRED YES
   CXX_EXTENSIONS NO
 )
@@ -124,7 +124,7 @@ target_link_libraries(main
 ########## Tests ##########
 add_executable(test_comm src_test/test_comm.cpp)
 set_target_properties(test_comm PROPERTIES
-  CXX_STANDARD 17
+  CXX_STANDARD 11
   CXX_STANDARD_REQUIRED YES
   CXX_EXTENSIONS NO
 )
@@ -134,7 +134,7 @@ target_link_libraries(test_comm
 
 add_executable(test_state_comm src_test/test_state_comm.cpp)
 set_target_properties(test_state_comm PROPERTIES
-  CXX_STANDARD 17
+  CXX_STANDARD 11
   CXX_STANDARD_REQUIRED YES
   CXX_EXTENSIONS NO
 )
@@ -145,7 +145,7 @@ target_link_libraries(test_state_comm
 
 add_executable(test_serialization src_test/test_serialization.cpp)
 set_target_properties(test_serialization PROPERTIES
-  CXX_STANDARD 17
+  CXX_STANDARD 11
   CXX_STANDARD_REQUIRED YES
   CXX_EXTENSIONS NO
 )
@@ -156,7 +156,7 @@ target_link_libraries(test_serialization
 
 add_executable(test_layer src_test/test_layer.cpp)
 set_target_properties(test_layer PROPERTIES
-  CXX_STANDARD 17
+  CXX_STANDARD 11
   CXX_STANDARD_REQUIRED YES
   CXX_EXTENSIONS NO
 )
@@ -166,7 +166,7 @@ target_link_libraries(test_layer
 
 add_executable(test_layer_perf src_test/test_layer_perf.cpp)
 set_target_properties(test_layer_perf PROPERTIES
-  CXX_STANDARD 17
+  CXX_STANDARD 11
   CXX_STANDARD_REQUIRED YES
   CXX_EXTENSIONS NO
 )
@@ -176,7 +176,7 @@ target_link_libraries(test_layer_perf
 
 add_executable(test_comm_perf src_test/test_comm_perf.cpp)
 set_target_properties(test_comm_perf PROPERTIES
-  CXX_STANDARD 17
+  CXX_STANDARD 11
   CXX_STANDARD_REQUIRED YES
   CXX_EXTENSIONS NO
 )
@@ -188,7 +188,7 @@ target_link_libraries(test_comm_perf
 
 add_executable(test_recv_perf src_test/test_recv_perf.cpp)
 set_target_properties(test_recv_perf PROPERTIES
-  CXX_STANDARD 17
+  CXX_STANDARD 11
   CXX_STANDARD_REQUIRED YES
   CXX_EXTENSIONS NO
 )

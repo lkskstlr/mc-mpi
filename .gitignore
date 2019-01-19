@@ -18,3 +18,4 @@ tex/__pycache__/
 tex/.ipynb_checkpoints
 saved_runs
 docs/doxygen/
+set_env.sh

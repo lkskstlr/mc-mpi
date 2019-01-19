@@ -6,7 +6,8 @@
 #include <stdio.h>
 
 int main(int argc, char const *argv[]) {
-  using std::cout, std::endl;
+  using std::cout;
+  using std::endl;
   using std::chrono::high_resolution_clock;
 
   // -- MPI Setup --
@@ -17,9 +18,9 @@ int main(int argc, char const *argv[]) {
   MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
 
   constexpr double cycle_time = 1e-3;
-  constexpr int num_cycles = 10'000;
-  int buffer_size = 1000'000'000;
-  int nb_particles = 500'000;
+  constexpr int num_cycles = 10000;
+  int buffer_size = 1000000000;
+  int nb_particles = 500000;
   int nb_reps = 10;
 
   std::vector<Particle> particles;
@@ -65,7 +66,7 @@ int main(int argc, char const *argv[]) {
       upper = atoi(argv[1]);
     }
     for (int j = 0; j < upper; ++j) {
-      for (int i = 0; i < 1000'000'000; ++i) {
+      for (int i = 0; i < 1000000000; ++i) {
         s = ((s + (s % k)) << 1);
       }
     }

@@ -2,6 +2,9 @@
 #include "random.h"
 #include <assert.h>
 #include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+
 
 Layer decompose_domain(real_t x_min, real_t x_max, real_t x_ini, int world_size,
                        int world_rank, int cells_per_layer, int nb_particles,
