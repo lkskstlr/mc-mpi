@@ -1,11 +1,11 @@
-#include "mcmpi_options.hpp"
-#include "worker.hpp"
-#include <iostream>
 #include <mpi.h>
 #include <stdio.h>
-#include <string>
 #include <unistd.h>
+#include <iostream>
+#include <string>
 #include <vector>
+#include "mcmpi_options.hpp"
+#include "worker.hpp"
 
 std::string parse_input(int argc, char **argv, int world_rank) {
   if (argc != 2 && world_rank == 0) {
@@ -20,7 +20,7 @@ std::string parse_input(int argc, char **argv, int world_rank) {
 
 int main(int argc, char **argv) {
   // -- MPI Setup --
-  MPI_Init(NULL, NULL);
+  MPI_Init(argc, argv);
   int world_rank, world_size;
 
   MPI_Comm_size(MPI_COMM_WORLD, &world_size);
