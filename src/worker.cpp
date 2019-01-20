@@ -215,6 +215,8 @@ void Worker::write_file(char *filename) {
 
   // Write to collective file
   MPI_File file;
+  printf("rank=%d, offset=%d, displ=%d\n", world_rank, offset,
+         displs[world_rank]);
   MPI_File_open(MPI_COMM_WORLD, filename, MPI_MODE_WRONLY | MPI_MODE_CREATE,
                 MPI_INFO_NULL, &file);
 
