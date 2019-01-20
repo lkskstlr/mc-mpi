@@ -20,7 +20,7 @@ std::string parse_input(int argc, char **argv, int world_rank) {
 
 int main(int argc, char **argv) {
   // -- MPI Setup --
-  MPI_Init(argc, argv);
+  MPI_Init(&argc, &argv);
   int world_rank, world_size;
 
   MPI_Comm_size(MPI_COMM_WORLD, &world_size);
