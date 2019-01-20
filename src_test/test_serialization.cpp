@@ -2,6 +2,8 @@
 #include "types.hpp"
 #include <mpi.h>
 #include <stdio.h>
+#include <stdlib.h>
+
 
 int hash(char const *data, int len) {
   unsigned int hash = 0x811c9dc5;
