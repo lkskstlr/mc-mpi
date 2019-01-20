@@ -5,12 +5,12 @@
 // guranteed by the standard. See:
 // https://stackoverflow.com/questions/422830/structure-of-a-c-object-in-memory-vs-a-struct
 
-#include <iostream>
 #include <mpi.h>
 #include <stdio.h>
+#include <iostream>
 
 class Timer {
-public:
+ public:
   typedef int id_t;
   enum Tag : id_t { Computation = 0, Send, Recv, Idle, STATE_COUNT };
   typedef struct timestamp_tag {
@@ -28,6 +28,7 @@ public:
     static MPI_Datatype mpi_t();
   } State;
 
+  Timer();
   Timestamp start(Tag tag);
   State restart(Timestamp &timestamp, Tag tag);
   void change(Timestamp &timestamp, Tag tag);
@@ -40,8 +41,9 @@ public:
 
   friend std::ostream &operator<<(std::ostream &stream, const Timer &timer);
 
-private:
+ private:
   State state;
+  const double offset;
 };
 
 #endif

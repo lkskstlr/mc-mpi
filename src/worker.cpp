@@ -27,7 +27,8 @@ Worker::Worker(int world_rank, const MCMPIOptions &options)
                      return StateComm::State::Finished;
                    }
                    return StateComm::State::Running;
-                 }) {
+                 }),
+      timer() {
   /* Time */
   if (world_rank == 0) {
     unix_timestamp_start = (unsigned long)time(NULL);
@@ -39,6 +40,8 @@ Worker::Worker(int world_rank, const MCMPIOptions &options)
 
   /* MPI_Wtime synchronization */
   printf("MPI_Wtick = %e\n", MPI_Wtick());
+  printf("rank = %d, timer = %e, MPI_Wtime = %e\n", world_rank, timer::time(),
+         MPI_Wtime());
 }
 
 void Worker::spin() {

@@ -1,6 +1,26 @@
 #include "timer.hpp"
 #include <mpi.h>
+#include <time.h>
 #include <string>
+
+double init_offset() {
+  if (MPI_WTIME_IS_GLOBAL == 1) {
+    return 0.0;
+  }
+
+  struct timespec time_now;
+  double t1, t2;
+
+  t1 = MPI_Wtime();
+  clock_gettime(CLOCK_REALTIME, &time_now);
+  t2 = MPI_Wtime();
+
+  double offset;
+  double nsec_to_sec = 1e-9;
+  offset =
+      (time_now.tv_sec - 0.5 * (t1 + t2)) + (nsec_to_sec * time_now.tv_nsec);
+  return offset;
+}
 
 MPI_Datatype Timer::State::mpi_t() {
   constexpr int nitems = 3;
@@ -31,13 +51,15 @@ int Timer::State::sprintf_header(char *str) {
 
 int Timer::State::sprintf_max_len() { return 6 * 30; }
 
+Timer::Timer() : offset(init_offset()){};
+
 Timer::Timestamp Timer::start(Tag tag) {
-  state.starttime = MPI_Wtime();
+  state.starttime = MPI_Wtime() + offset;
   return {tag, state.starttime};
 }
 
 void Timer::change(Timestamp &timestamp, Tag tag) {
-  double time = MPI_Wtime();
+  double time = MPI_Wtime() + offset;
   state.cumm_times[timestamp.tag] += (time - timestamp.time);
 
   // update timestamp
@@ -46,7 +68,7 @@ void Timer::change(Timestamp &timestamp, Tag tag) {
 }
 
 Timer::State Timer::stop(Timer::Timestamp timestamp) {
-  state.endtime = MPI_Wtime();
+  state.endtime = MPI_Wtime() + offset;
   state.cumm_times[timestamp.tag] += (state.endtime - timestamp.time);
 
   return state;
@@ -79,7 +101,7 @@ Timer::State Timer::restart(Timestamp &timestamp, Tag tag) {
 }
 
 double Timer::tick() const { return MPI_Wtick(); }
-double Timer::time() const { return MPI_Wtime(); }
+double Timer::time() const { return MPI_Wtime() + offset; }
 double Timer::starttime() const { return state.starttime; }
 
 std::ostream &operator<<(std::ostream &os, const Timer &timer) {
