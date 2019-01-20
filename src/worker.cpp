@@ -36,6 +36,11 @@ Worker::Worker(int world_rank, const MCMPIOptions &options)
   timer_states.reserve(100);
   stats_states.reserve(100);
   cycle_states.reserve(100);
+
+  /* MPI_Wtime synchronization */
+
+  printf("Synchronization: rank = %d, MPI_WTIME_IS_GLOBAL = %d\n", world_rank,
+         MPI_WTIME_IS_GLOBAL);
 }
 
 void Worker::spin() {
@@ -213,18 +218,8 @@ void Worker::write_file(char *filename) {
     displs[i] = displs[i - 1] + recvcounts[i - 1];
   }
 
-  MPI_Barrier(MPI_COMM_WORLD);
-  for (int i = 0; i < offset; i++) {
-    if (buf[i] == 0) {
-      printf("rank=%d, buf[%d] =0\n", world_rank, i);
-    }
-  }
-
-  MPI_Barrier(MPI_COMM_WORLD);
   // Write to collective file
   MPI_File file;
-  printf("rank=%d, offset=%d, displ=%d\n", world_rank, offset,
-         displs[world_rank]);
   MPI_File_open(MPI_COMM_WORLD, filename, MPI_MODE_WRONLY | MPI_MODE_CREATE,
                 MPI_INFO_NULL, &file);
 
