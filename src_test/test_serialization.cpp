@@ -1,9 +1,7 @@
+#include <mpi.h>
+#include <iostream>
 #include "particle_comm.hpp"
 #include "types.hpp"
-#include <mpi.h>
-#include <stdio.h>
-#include <stdlib.h>
-
 
 int hash(char const *data, int len) {
   unsigned int hash = 0x811c9dc5;
@@ -32,6 +30,7 @@ int main(int argc, char const *argv[]) {
              2134512};
   const int hash1 = hash((char *)&p, sizeof(p));
 
+  bool flag_success;
   if (world_rank == 1) {
     comm.send(p, 0, 0);
   } else {
@@ -45,11 +44,20 @@ int main(int argc, char const *argv[]) {
     const int hash2 = hash((char *)&p2, sizeof(p2));
 
     if (hash1 == hash2) {
-      printf("CORRECT\n");
-      exit(0);
+      flag_success = true;
     } else {
-      printf("ERROR: hash values are not identical. Serialization does not "
-             "work!\n");
+      flag_success = false;
+    }
+  }
+
+  MPI_Barrier(MPI_COMM_WORLD);
+  if (world_rank == 0) {
+    if (flag_success) {
+      std::cout << "CORRECT" << std::endl;
+    } else {
+      std::cout << "ERROR: hash values are not identical. Serialization does "
+                   "not work!"
+                << std::endl;
     }
   }
 

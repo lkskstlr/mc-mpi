@@ -31,7 +31,7 @@ echo -n "    Test State Comm.      ( 1 sec): "
 mpirun -n 10 ./test_state_comm;
 
 echo -n "    Test Serialization    ( 1 sec): "
-mpirun -n 10 ./test_serialization;
+mpirun -n 2 ./test_serialization;
 
 echo -n "    Test Layer Simulation ( 1 sec): "
 ./test_layer;
