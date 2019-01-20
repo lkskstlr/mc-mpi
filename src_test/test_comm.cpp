@@ -1,8 +1,8 @@
-#include "async_comm.hpp"
-#include <chrono>
 #include <mpi.h>
-#include <stdio.h>
+#include <chrono>
+#include <iostream>
 #include <thread>
+#include "async_comm.hpp"
 
 using std::chrono::high_resolution_clock;
 
@@ -29,22 +29,19 @@ int main(int argc, char const *argv[]) {
   }
 
   while (true) {
-    if (world_rank > 0) {
-      if (comm.recv(data_recv, MPI_ANY_SOURCE, MPI_ANY_TAG)) {
+    comm.recv(data_recv, MPI_ANY_SOURCE, MPI_ANY_TAG);
+    if (data_recv.size() == (world_size - world_rank - 1) * num_ints) {
+      // received all
+      if (world_rank > 0) {
         comm.send(data_recv, world_rank - 1, 0);
       }
-    } else {
-      // master
-      comm.recv(data_recv, MPI_ANY_SOURCE, MPI_ANY_TAG);
-
-      if (data_recv.size() == (world_size - 1) * num_ints) {
-        printf("CORRECT\n");
-        exit(0);
-      }
+      break;
     }
   }
 
+  if (world_rank == 0) {
+    std::cout << "CORRECT" << std::endl;
+  }
   MPI_Finalize();
-
   return 0;
 }
