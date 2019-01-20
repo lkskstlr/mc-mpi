@@ -1,8 +1,8 @@
-#include "layer.hpp"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "layer.hpp"
 
 void compareFiles(FILE *fp1, FILE *fp2) {
   char ch1 = getc(fp1);
@@ -47,7 +47,7 @@ int main(int argc, char const *argv[]) {
   std::vector<Particle> particles_left;
   std::vector<Particle> particles_right;
   std::vector<Particle> particles_disabled;
-  layer.simulate(1'000'000'000, particles_left, particles_right,
+  layer.simulate(1000000000, particles_left, particles_right,
                  particles_disabled);
   layer.dump_WA();
 

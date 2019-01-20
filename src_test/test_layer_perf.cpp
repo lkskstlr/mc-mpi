@@ -1,9 +1,9 @@
-#include "layer.hpp"
-#include <chrono>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <chrono>
+#include "layer.hpp"
 
 void compareFiles(FILE *fp1, FILE *fp2) {
   char ch1 = getc(fp1);
@@ -39,8 +39,8 @@ int main(int argc, char const *argv[]) {
   const real_t x_ini = sqrtf(2.0) / 2.0;
   constexpr int world_size = 1;
   constexpr int world_rank = 0;
-  constexpr int nb_cells_per_layer = 1'000;
-  constexpr int nb_particles = 1'000'000;
+  constexpr int nb_cells_per_layer = 1000;
+  constexpr int nb_particles = 1000000;
   constexpr real_t particle_min_weight = 0.0;
 
   Layer layer(decompose_domain(x_min, x_max, x_ini, world_size, world_rank,
@@ -52,7 +52,7 @@ int main(int argc, char const *argv[]) {
   std::vector<Particle> particles_disabled;
 
   auto start = high_resolution_clock::now();
-  layer.simulate(1'000'000'000, particles_left, particles_right,
+  layer.simulate(1000000000, particles_left, particles_right,
                  particles_disabled);
   auto finish = high_resolution_clock::now();
 

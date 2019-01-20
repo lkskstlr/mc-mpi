@@ -1,19 +1,20 @@
 #include "worker.hpp"
-#include "yaml_dumper.hpp"
-#include "yaml_loader.hpp"
-#include <chrono>
-#include <cstring>
 #include <dirent.h>
-#include <numeric>
 #include <stdio.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <thread>
 #include <time.h>
 #include <unistd.h>
+#include <chrono>
+#include <cstring>
+#include <numeric>
+#include <thread>
+#include "yaml_dumper.hpp"
+#include "yaml_loader.hpp"
 
 Worker::Worker(int world_rank, const MCMPIOptions &options)
-    : world_rank(world_rank), options(options),
+    : world_rank(world_rank),
+      options(options),
       layer(decompose_domain(options.x_min, options.x_max, options.x_ini,
                              options.world_size, world_rank,
                              options.nb_cells_per_layer, options.nb_particles,
@@ -27,7 +28,6 @@ Worker::Worker(int world_rank, const MCMPIOptions &options)
                    }
                    return StateComm::State::Running;
                  }) {
-
   /* Time */
   if (world_rank == 0) {
     unix_timestamp_start = (unsigned long)time(NULL);

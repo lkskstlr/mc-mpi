@@ -1,10 +1,10 @@
+#include <mpi.h>
+#include <chrono>
+#include <iostream>
+#include <thread>
 #include "layer.hpp"
 #include "particle_comm.hpp"
 #include "timer.hpp"
-#include <chrono>
-#include <iostream>
-#include <mpi.h>
-#include <thread>
 
 int main(int argc, char const *argv[]) {
   using std::chrono::high_resolution_clock;
@@ -17,8 +17,8 @@ int main(int argc, char const *argv[]) {
   MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
 
   constexpr double cycle_time = 1e-3;
-  constexpr int num_cycles = 10'000;
-  int buffer_size = 100'000'000;
+  constexpr int num_cycles = 10000;
+  int buffer_size = 100000000;
 
   Timer timer;
   /* Commit Timer::State Type */
@@ -36,7 +36,7 @@ int main(int argc, char const *argv[]) {
     auto timestamp = timer.start(Timer::Tag::Recv);
     auto start = high_resolution_clock::now();
 
-    for (int i = 0; i < 1'000; ++i) {
+    for (int i = 0; i < 1000; ++i) {
       particle_comm.recv(particles, MPI_ANY_SOURCE, 0);
     }
 
@@ -45,7 +45,7 @@ int main(int argc, char const *argv[]) {
     std::chrono::duration<double, std::milli> elapsed = finish - start;
     std::cout << timer << std::endl;
     std::cout << "Elapsed = " << elapsed.count() << " ms" << std::endl;
-    std::cout << "This means " << elapsed.count() / 1'000
+    std::cout << "This means " << elapsed.count() / 1000
               << " ms per empty receive" << std::endl;
     timer.reset();
   }
@@ -56,7 +56,7 @@ int main(int argc, char const *argv[]) {
     auto timestamp = timer.start(Timer::Tag::Send);
     auto start = high_resolution_clock::now();
 
-    for (int i = 0; i < 1'000; ++i) {
+    for (int i = 0; i < 1000; ++i) {
       particle_comm.send(particles, 0, 0);
     }
 
@@ -65,7 +65,7 @@ int main(int argc, char const *argv[]) {
     std::chrono::duration<double, std::milli> elapsed = finish - start;
     std::cout << timer << std::endl;
     std::cout << "Elapsed = " << elapsed.count() << " ms" << std::endl;
-    std::cout << "This means " << elapsed.count() / 1'000
+    std::cout << "This means " << elapsed.count() / 1000
               << " ms per 1 Particle send" << std::endl;
     timer.reset();
   }
@@ -76,7 +76,7 @@ int main(int argc, char const *argv[]) {
     auto timestamp = timer.start(Timer::Tag::Recv);
     auto start = high_resolution_clock::now();
 
-    for (int i = 0; i < 1'000; ++i) {
+    for (int i = 0; i < 1000; ++i) {
       particle_comm.recv(particles, MPI_ANY_SOURCE, 0);
     }
 
@@ -85,7 +85,7 @@ int main(int argc, char const *argv[]) {
     std::chrono::duration<double, std::milli> elapsed = finish - start;
     std::cout << timer << std::endl;
     std::cout << "Elapsed = " << elapsed.count() << " ms" << std::endl;
-    std::cout << "This means " << elapsed.count() / 1'000
+    std::cout << "This means " << elapsed.count() / 1000
               << " ms per 1 Particle recv" << std::endl;
     timer.reset();
     particles.clear();
@@ -99,7 +99,7 @@ int main(int argc, char const *argv[]) {
     auto timestamp = timer.start(Timer::Tag::Send);
     auto start = high_resolution_clock::now();
 
-    for (int i = 0; i < 1'000; ++i) {
+    for (int i = 0; i < 1000; ++i) {
       particle_comm.free();
     }
 
@@ -108,7 +108,7 @@ int main(int argc, char const *argv[]) {
     std::chrono::duration<double, std::milli> elapsed = finish - start;
     std::cout << timer << std::endl;
     std::cout << "Elapsed = " << elapsed.count() << " ms" << std::endl;
-    std::cout << "This means " << elapsed.count() / 1'000
+    std::cout << "This means " << elapsed.count() / 1000
               << " ms per 1 Partcile free" << std::endl;
     timer.reset();
   }
@@ -213,8 +213,9 @@ int main(int argc, char const *argv[]) {
     // }
     // printf(")\n");
 
-    fprintf(file, "proc, starttime, endtime, state_comp, state_send, "
-                  "state_recv, state_idle\n");
+    fprintf(file,
+            "proc, starttime, endtime, state_comp, state_send, "
+            "state_recv, state_idle\n");
     int proc = 0;
     for (int i = 0; i < total_len; ++i) {
       if (proc < world_size - 1 && displs[proc + 1] == i) {
