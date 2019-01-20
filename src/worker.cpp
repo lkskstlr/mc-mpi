@@ -213,6 +213,14 @@ void Worker::write_file(char *filename) {
     displs[i] = displs[i - 1] + recvcounts[i - 1];
   }
 
+  MPI_Barrier(MPI_COMM_WORLD);
+  for (int i = 0; i < offset; i++) {
+    if (buf[i] == 0) {
+      printf("rank=%d, buf[%d] =0\n", world_rank, i);
+    }
+  }
+
+  MPI_Barrier(MPI_COMM_WORLD);
   // Write to collective file
   MPI_File file;
   printf("rank=%d, offset=%d, displ=%d\n", world_rank, offset,
