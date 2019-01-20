@@ -89,5 +89,19 @@ timer.stop(timestamp);
 ```
 Because this way the sum of the computation time and send time will be equal to timing the both blocks together.
 
+For synchronization time since epoch may be used which is viable because the time is stored in a double
+```Matlab
+>> timestamp = double(4102444800) % Timestamp for 01/01/20100 at https://www.epochconverter.com/
+timestamp =
+   4.1024e+09
+>> eps(timestamp) % Get Wtick restriction based on using a time offset
+ans =
+   4.7684e-07
+>> eps(single(timestamp)) % Single precision would not be sufficient
+ans =
+  single
+   256
+```
+
 ---
 The project can be opened with sublime text. A build system and settings for EasyClangComplete are set.
