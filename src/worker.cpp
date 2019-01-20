@@ -39,9 +39,9 @@ Worker::Worker(int world_rank, const MCMPIOptions &options)
   cycle_states.reserve(100);
 
   /* MPI_Wtime synchronization */
-  printf("MPI_Wtick = %e\n", MPI_Wtick());
-  printf("rank = %d, timer = %e, MPI_Wtime = %e\n", world_rank, timer.time(),
-         MPI_Wtime());
+  printf("MPI_Wtick = %.18e\n", MPI_Wtick());
+  printf("rank = %d,\ntimer     = %.18e,\nMPI_Wtime = %.18e\n\n", world_rank,
+         timer.time(), MPI_Wtime());
 }
 
 void Worker::spin() {
