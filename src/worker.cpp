@@ -37,11 +37,6 @@ Worker::Worker(int world_rank, const MCMPIOptions &options)
   timer_states.reserve(100);
   stats_states.reserve(100);
   cycle_states.reserve(100);
-
-  /* MPI_Wtime synchronization */
-  printf("MPI_Wtick = %.18e\n", MPI_Wtick());
-  printf("rank = %d,\ntimer     = %.18e,\nMPI_Wtime = %.18e\n\n", world_rank,
-         timer.time(), MPI_Wtime());
 }
 
 void Worker::spin() {

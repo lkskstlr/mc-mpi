@@ -101,6 +101,8 @@ def parse_data(data, outpath):
     data['nb_total_send'] = df['stats_nb_send'].sum()
     data['nb_total_recv'] = df['stats_nb_recv'].sum()
 
+    print("total_send = {}".format(data['nb_total_send']))
+    print("total_recv = {}".format(data['nb_total_recv']))
     assert (data['nb_total_send'] == data['nb_total_recv']), "Number of Send/Recv should be equal"
 
     # Sizes
