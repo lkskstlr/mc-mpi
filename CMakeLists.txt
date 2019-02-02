@@ -186,6 +186,17 @@ target_link_libraries(test_comm_perf
   layer
 )
 
+add_executable(test_mpi_sync src_test/test_mpi_sync.cpp)
+set_target_properties(test_mpi_sync PROPERTIES
+  CXX_STANDARD 11
+  CXX_STANDARD_REQUIRED YES
+  CXX_EXTENSIONS NO
+)
+target_link_libraries(test_mpi_sync
+  timer
+  layer
+)
+
 add_executable(test_recv_perf src_test/test_recv_perf.cpp)
 set_target_properties(test_recv_perf PROPERTIES
   CXX_STANDARD 11
