@@ -20,3 +20,4 @@ saved_runs
 docs/doxygen/
 set_env.sh
 midterm/
+.vscode/

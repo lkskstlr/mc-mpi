@@ -5,33 +5,8 @@
 #include <chrono>
 #include "layer.hpp"
 
-void compareFiles(FILE *fp1, FILE *fp2) {
-  char ch1 = getc(fp1);
-  char ch2 = getc(fp2);
-
-  // iterate loop till end of file
-  while (ch1 != EOF && ch2 != EOF) {
-    if (ch1 != ch2) {
-      fclose(fp1);
-      fclose(fp2);
-      printf("ERROR: Output files are not identical!\n");
-      exit(1);
-    }
-
-    // fetching character until end of file
-    ch1 = getc(fp1);
-    ch2 = getc(fp2);
-  }
-
-  if (!(ch1 == EOF && ch2 == EOF)) {
-    fclose(fp1);
-    fclose(fp2);
-    printf("ERROR: Output files are not identical!\n");
-    exit(1);
-  }
-}
-
-int main(int argc, char const *argv[]) {
+int main(int argc, char const *argv[])
+{
   using std::chrono::high_resolution_clock;
 
   constexpr real_t x_min = 0.0;

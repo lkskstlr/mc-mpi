@@ -28,6 +28,9 @@ else(DEFINED ENV{CXX})
 endif(DEFINED ENV{CXX})
 
 
+########## Required Packages ##########
+find_package(OpenMP REQUIRED)
+
 ########## Libraries ##########
 add_library(yaml SHARED
   src/yaml_loader.cpp
@@ -66,6 +69,9 @@ set_target_properties(layer PROPERTIES
   CXX_EXTENSIONS NO
 )
 target_link_libraries(layer PUBLIC types)
+target_link_libraries(layer PRIVATE
+  OpenMP::OpenMP_CXX
+)
 
 
 add_library(comm SHARED
@@ -164,6 +170,18 @@ target_link_libraries(test_layer
   layer
 )
 
+add_executable(test_layer_omp src_test/test_layer_omp.cpp)
+set_target_properties(test_layer_omp PROPERTIES
+  CXX_STANDARD 11
+  CXX_STANDARD_REQUIRED YES
+  CXX_EXTENSIONS NO
+)
+target_link_libraries(test_layer_omp
+  layer
+)
+
+
+
 add_executable(test_layer_perf src_test/test_layer_perf.cpp)
 set_target_properties(test_layer_perf PROPERTIES
   CXX_STANDARD 11
@@ -171,6 +189,16 @@ set_target_properties(test_layer_perf PROPERTIES
   CXX_EXTENSIONS NO
 )
 target_link_libraries(test_layer_perf
+  layer
+)
+
+add_executable(test_layer_omp_perf src_test/test_layer_omp_perf.cpp)
+set_target_properties(test_layer_omp_perf PROPERTIES
+  CXX_STANDARD 11
+  CXX_STANDARD_REQUIRED YES
+  CXX_EXTENSIONS NO
+)
+target_link_libraries(test_layer_omp_perf
   layer
 )
 

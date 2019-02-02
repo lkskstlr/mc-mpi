@@ -11,7 +11,8 @@
  * \brief Stores one layer and the particles in it. Also does the
  * computations on the particles
  */
-class Layer {
+class Layer
+{
 public:
   /*!
    * \function Layer
@@ -56,6 +57,25 @@ public:
   void simulate(int nb_steps, std::vector<Particle> &particles_left,
                 std::vector<Particle> &particles_right,
                 std::vector<Particle> &particles_disabled);
+
+  /*!
+   * \function simulate_omp
+   *nonnegative
+   * \brief Simulates nb_particles until they leave the domain or become inactive
+   *
+   * \param[in] nb_particles Number of particles to simulate
+   * \param[in] particles_left reference to the vector at wich the particles
+   * that leave the layer to the left (x_min) will be appended
+   * \param[in] particles_right reference to the vector at wich the particles
+   * that leave the layer to the right (x_max) will be appended
+   * \param[in] particles_disabled reference to the vector at wich the particles
+   * that fall below the min weight will be appended
+   */
+  void simulate_omp(int nb_particles, std::vector<Particle> &particles_left,
+                    std::vector<Particle> &particles_right,
+                    std::vector<Particle> &particles_disabled);
+  int simulate_particle_omp(Particle &particle, std::vector<real_t> &weights_absorbed_local);
+  int particle_step_omp(Particle &particle, std::vector<real_t> &weights_absorbed_local);
 
   void dump_WA();
 
