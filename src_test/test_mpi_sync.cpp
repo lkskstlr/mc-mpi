@@ -88,13 +88,18 @@ int main(int argc, char *argv[])
 {
   int world_size;
   int world_rank;
+  //Change later
+
+  int particle_tag = 0;
 
   constexpr real_t x_min = 0.0;
   constexpr real_t x_max = 1.0;
   const real_t x_ini = sqrtf(2.0) / 2.0;
-  constexpr int nb_cells_per_layer = 100;
+  constexpr int nb_cells_per_layer = 500;
   constexpr int nb_particles = 1000000;
   constexpr real_t particle_min_weight = 1e-12;
+
+  int nb_particles_per_cycle = nb_particles / 10;
 
   //MPI initialization and basic function calls
   MPI_Init(&argc, &argv);
@@ -129,145 +134,101 @@ int main(int argc, char *argv[])
   std::vector<Particle> particles_send_left;
   std::vector<Particle> particles_send_right;
   std::vector<Particle> particles_disabled;
-  std::vector<Particle> particles_recv_right;
-  std::vector<Particle> particles_recv_left;
 
-  int size_send_right;
-  int size_send_left;
-  int size_recv_right, size_recv_left, i = 0;
   int unfinished_flag = 1;
   int disabled_own, disabled_all;
+  int old_size, recv_count, temp = 0, i = 0;
+
+  double starttime = MPI_Wtime();
 
   while (unfinished_flag)
   {
-    layer.simulate(100000000, particles_send_left, particles_send_right, particles_disabled);
-    size_send_right = particles_send_right.size();
-    size_send_left = particles_send_left.size();
-    /************************** [EVENS] <== [ODDS] *****************************/
-    //SIZE
-    if (world_rank % 2)
+
+    layer.simulate_omp(nb_particles_per_cycle, particles_send_left, particles_send_right, particles_disabled);
+
+    // Boundary
+    if (world_rank == 0)
     {
-      MPI_Ssend(&size_send_left, 1, MPI_INT, world_rank - 1, 0, MPI_COMM_WORLD);
+      particles_disabled.insert(particles_disabled.end(), particles_send_left.begin(), particles_send_left.end());
+      particles_send_left.clear();
     }
-    else if (world_rank + 1 < world_size)
+    if (world_rank + 1 == world_size)
     {
-      MPI_Recv(&size_recv_right, 1, MPI_INT, world_rank + 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      particles_disabled.insert(particles_disabled.end(), particles_send_right.begin(), particles_send_right.end());
+      particles_send_right.clear();
     }
-    //DATA
-    if (world_rank % 2)
+    //Prepare the particles vector for the extra ones from the left OR right, which are AT MOST nb_particles_per_cycle
+    old_size = layer.particles.size();
+    layer.particles.resize(layer.particles.size() + nb_particles_per_cycle);
+    /************************** [ODDS] <==> [EVENS] ****************************/
+    recv_count = 0;
+    if ((world_rank % 2) && (world_rank + 1 < world_size))
     {
-      if (size_send_left)
-      {
-        MPI_Ssend(&particles_send_left[0], size_send_left, mpi_particle_type, world_rank - 1, 0, MPI_COMM_WORLD);
-        particles_send_left.clear();
-      }
+      //ODD
+      MPI_Sendrecv(particles_send_right.data(), particles_send_right.size(), mpi_particle_type, world_rank + 1, particle_tag,
+                   layer.particles.data() + old_size, nb_particles_per_cycle, mpi_particle_type, world_rank + 1, particle_tag,
+                   MPI_COMM_WORLD, &status);
+      temp = particles_send_right.size();
+      particles_send_right.clear();
+      MPI_Get_count(&status, mpi_particle_type, &recv_count);
     }
-    else if ((world_rank + 1 < world_size) && size_recv_right)
+    if (!(world_rank % 2) && (world_rank > 0))
     {
-      particles_recv_right.resize(size_recv_right);
-      MPI_Recv(&particles_recv_right[0], particles_recv_right.size(), mpi_particle_type, world_rank + 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-      layer.particles.insert(layer.particles.end(), particles_recv_right.begin(), particles_recv_right.end());
-      particles_recv_right.clear();
-    }
-    /************************** [ODDS] <== [EVENS] *****************************/
-    //SIZE
-    if (!(world_rank % 2))
-    {
-      if (world_rank)
-        MPI_Ssend(&size_send_left, 1, MPI_INT, world_rank - 1, 0, MPI_COMM_WORLD);
-    }
-    else if (world_rank + 1 < world_size)
-    {
-      MPI_Recv(&size_recv_right, 1, MPI_INT, world_rank + 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    }
-    //DATA
-    if (!(world_rank % 2))
-    {
-      if (world_rank && size_send_left)
-      {
-        MPI_Ssend(&particles_send_left[0], size_send_left, mpi_particle_type, world_rank - 1, 0, MPI_COMM_WORLD);
-        particles_send_left.clear();
-      }
-    }
-    else if ((world_rank + 1 < world_size) && size_recv_right)
-    {
-      particles_recv_right.resize(size_recv_right);
-      MPI_Recv(&particles_recv_right[0], particles_recv_right.size(), mpi_particle_type, world_rank + 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-      layer.particles.insert(layer.particles.end(), particles_recv_right.begin(), particles_recv_right.end());
-      particles_recv_right.clear();
-    }
-    /************************** [ODDS] ==> [EVENS] *****************************/
-    //SIZE
-    if (world_rank % 2)
-    {
-      if (world_rank + 1 < world_size)
-        MPI_Ssend(&size_send_right, 1, MPI_INT, world_rank + 1, 0, MPI_COMM_WORLD);
-    }
-    else if (world_rank)
-    {
-      MPI_Recv(&size_recv_left, 1, MPI_INT, world_rank - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    }
-    //DATA
-    if (world_rank % 2)
-    {
-      if ((world_rank + 1 < world_size) && size_send_right)
-      {
-        MPI_Ssend(&particles_send_right[0], size_send_right, mpi_particle_type, world_rank + 1, 0, MPI_COMM_WORLD);
-        particles_send_right.clear();
-      }
-    }
-    else if (world_rank && size_recv_left)
-    {
-      particles_recv_left.resize(size_recv_left);
-      MPI_Recv(&particles_recv_left[0], particles_recv_left.size(), mpi_particle_type, world_rank - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-      layer.particles.insert(layer.particles.end(), particles_recv_left.begin(), particles_recv_left.end());
-      particles_recv_left.clear();
-    }
-    /************************** [EVENS] ==> [ODDS] *****************************/
-    //SIZE
-    if (!(world_rank % 2))
-    {
-      if ((world_rank + 1 < world_size))
-        MPI_Ssend(&size_send_right, 1, MPI_INT, world_rank + 1, 0, MPI_COMM_WORLD);
-    }
-    else
-    {
-      MPI_Recv(&size_recv_left, 1, MPI_INT, world_rank - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    }
-    //DATA
-    if (!(world_rank % 2))
-    {
-      if ((world_rank + 1 < world_size) && size_send_right)
-      {
-        MPI_Ssend(&particles_send_right[0], size_send_right, mpi_particle_type, world_rank + 1, 0, MPI_COMM_WORLD);
-        particles_send_right.clear();
-      }
-    }
-    else if (size_recv_left)
-    {
-      particles_recv_left.resize(size_recv_left);
-      MPI_Recv(&particles_recv_left[0], particles_recv_left.size(), mpi_particle_type, world_rank - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-      layer.particles.insert(layer.particles.end(), particles_recv_left.begin(), particles_recv_left.end());
-      particles_recv_left.clear();
+      //EVEN
+      MPI_Sendrecv(particles_send_left.data(), particles_send_left.size(), mpi_particle_type, world_rank - 1, particle_tag,
+                   layer.particles.data() + old_size, nb_particles_per_cycle, mpi_particle_type, world_rank - 1, particle_tag,
+                   MPI_COMM_WORLD, &status);
+      temp = particles_send_left.size();
+      particles_send_left.clear();
+      MPI_Get_count(&status, mpi_particle_type, &recv_count);
     }
 
+    layer.particles.resize(old_size + recv_count + nb_particles_per_cycle);
+    old_size += recv_count;
+
+    MPI_Barrier(MPI_COMM_WORLD);
+    /************************** [EVENS] <==> [ODDS] ****************************/
+    recv_count = 0;
+    if (!(world_rank % 2) && (world_rank + 1 < world_size))
+    {
+      //EVEN
+      MPI_Sendrecv(particles_send_right.data(), particles_send_right.size(), mpi_particle_type, world_rank + 1, particle_tag,
+                   layer.particles.data() + old_size, nb_particles_per_cycle, mpi_particle_type, world_rank + 1, particle_tag,
+                   MPI_COMM_WORLD, &status);
+      temp = particles_send_right.size();
+      particles_send_right.clear();
+      MPI_Get_count(&status, mpi_particle_type, &recv_count);
+    }
+    if (world_rank % 2)
+    {
+      //ODD
+      MPI_Sendrecv(particles_send_left.data(), particles_send_left.size(), mpi_particle_type, world_rank - 1, particle_tag,
+                   layer.particles.data() + old_size, nb_particles_per_cycle, mpi_particle_type, world_rank - 1, particle_tag,
+                   MPI_COMM_WORLD, &status);
+      temp = particles_send_left.size();
+      particles_send_left.clear();
+      MPI_Get_count(&status, mpi_particle_type, &recv_count);
+    }
+
+    layer.particles.resize(old_size + recv_count);
+
     disabled_own = particles_disabled.size();
-    if (world_rank == 0)
-      disabled_own += size_send_left;
-    else if (world_rank + 1 == world_size)
-      disabled_own += size_send_right;
     MPI_Allreduce(&disabled_own, &disabled_all, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
     if (disabled_all == nb_particles)
       unfinished_flag = 0;
 
-    MPI_Barrier(MPI_COMM_WORLD);
-    usleep(10000 * world_rank);
-    if (world_rank == 0)
-      printf("\n\n========== %2d ==========\n", i);
-    printf("rank = %2d, disabled_own = %6d, disabled_all = %6d\n", world_rank, disabled_own, disabled_all);
-    usleep(100000);
+    // MPI_Barrier(MPI_COMM_WORLD);
+    // usleep(10000 * world_rank);
+    // if (world_rank == 0)
+    //   printf("\n\n========== %2d ==========\n", i);
+    // printf("rank = %2d, active = %7d, disabled_own = %6d, disabled_all = %6d\n", world_rank, (int)layer.particles.size(), disabled_own, disabled_all);
+    // usleep(100000);
     i++;
   }
+
+  double endtime = MPI_Wtime();
+
+  printf("%d, time = %f\n", world_rank, endtime - starttime);
 
   dump(world_rank, world_size, layer);
   // MPI_Barrier(MPI_COMM_WORLD);
