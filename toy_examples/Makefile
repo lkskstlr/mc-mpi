@@ -2,7 +2,7 @@ CC=mpicc
 CXX=mpicxx
 CFLAGS=-O3
 
-BINS=mpi_test logging logging2 logging3 timing assert_debug assert_release array_in_struct load_double particle_packing coll_io
+BINS=rma01 mpi_test logging logging2 logging3 timing assert_debug assert_release array_in_struct load_double particle_packing coll_io
 
 all:$(BINS)
 
@@ -12,6 +12,12 @@ test: test_logging
 .PHONY: test_logging	
 test_logging: logging2 logging3
 	./test_logging
+
+rma02: rma02.c
+	$(CC) -Wall -Werror -ggdb -std=c99 -o $@ $^
+
+rma01: rma01.c
+	$(CC) -Wall -Werror -ggdb -std=c99 -o $@ $^
 
 coll_io: coll_io.cpp
 	$(CXX) $(CFLAGS) -std=c++17 -o $@ $^
