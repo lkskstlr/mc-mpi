@@ -2,7 +2,7 @@ CC=mpicc
 CXX=mpicxx
 CFLAGS=-O3
 
-BINS=mpi_comm rma01 rma02 mpi_test logging logging2 logging3 timing assert_debug assert_release array_in_struct load_double particle_packing coll_io
+BINS=test_logging mpi_comm rma01 rma02 mpi_test logging logging2 logging3 timing assert_debug assert_release array_in_struct load_double particle_packing coll_io
 
 all:$(BINS)
 

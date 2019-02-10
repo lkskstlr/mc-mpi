@@ -1,8 +1,11 @@
+#define _BSD_SOURCE
+
 #include <mpi.h>
 #include <chrono>
 #include <iostream>
 #include <thread>
 #include "rma_comm.hpp"
+#include <unistd.h>
 
 int main(int argc, char **argv)
 {
@@ -14,10 +17,12 @@ int main(int argc, char **argv)
     MPI_Comm_size(MPI_COMM_WORLD, &world_size);
     MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
 
-    cout << "Hi" << endl;
+    char hostname[100];
+    gethostname(hostname, 100);
+    cout << "Hi from " << hostname << " with rank" << world_rank << endl;
 
     RmaComm<int> comm;
-    comm.init(100);
+    comm.init(65000);
     comm.mpi_data_t = MPI_INT;
 
     if (world_rank == 0)
@@ -32,7 +37,7 @@ int main(int argc, char **argv)
 
     if (world_rank == 1)
     {
-        std::vector<int> data = {1, 2, 3, 4};
+        std::vector<int> data(5000, 17);
         comm.send(data, 0);
     }
     MPI_Barrier(MPI_COMM_WORLD);
@@ -44,12 +49,6 @@ int main(int argc, char **argv)
         std::vector<int> data;
         comm.recv(data, 1);
         comm.print();
-
-        for (auto const &x : data)
-        {
-            cout << x << "\n";
-        }
-        cout << endl;
     }
 
     MPI_Finalize();
