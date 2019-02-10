@@ -6,6 +6,11 @@
 #include <stdlib.h>
 #include <omp.h>
 
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+#define MAX(a, b) (((a) > (b)) ? (a) : (b))
+
+#define MAX_PARTICLES_VECTOR 1000000
+
 Layer decompose_domain(real_t x_min, real_t x_max, real_t x_ini, int world_size,
                        int world_rank, int cells_per_layer, int nb_particles,
                        real_t particle_min_weight)
@@ -19,7 +24,7 @@ Layer decompose_domain(real_t x_min, real_t x_max, real_t x_ini, int world_size,
   if (world_rank == nc_ini)
   {
     seed_t seed = 5127801;
-    layer.create_particles(x_ini, 1.0 / nb_particles, nb_particles, &seed);
+    layer.create_particles(x_ini, 1.0 / nb_particles, nb_particles, seed);
   }
 
   return layer;
@@ -28,7 +33,9 @@ Layer decompose_domain(real_t x_min, real_t x_max, real_t x_ini, int world_size,
 Layer::Layer(real_t x_min, real_t x_max, int index_start, int m,
              real_t particle_min_weight)
     : x_min(x_min), x_max(x_max), m(m), index_start(index_start),
-      dx((x_max - x_min) / m), particle_min_weight(particle_min_weight)
+      dx((x_max - x_min) / m), particle_min_weight(particle_min_weight),
+      left_border(fabs(x_min) < EPS_PRECISION),
+      right_border(fabs(x_max - 1.0) < EPS_PRECISION)
 {
   constexpr int vector_reserve = 10000;
 
@@ -50,102 +57,53 @@ Layer::Layer(real_t x_min, real_t x_max, int index_start, int m,
   particles.reserve(vector_reserve);
 }
 
-void Layer::create_particles(real_t x_ini, real_t wmc, int n, seed_t *p_seed)
+void Layer::create_particles(real_t x_ini, real_t wmc, int n, seed_t seed)
 {
   if (x_ini > x_min && x_ini < x_max)
   {
-    Particle particle = Particle();
-    particle.x = x_ini;
-    particle.wmc = wmc;
+    this->x_ini = x_ini;
+    this->wmc = wmc;
+    this->nb_particles_create = n;
+    this->seed = seed;
 
-    // compute index
-    particle.index = static_cast<int>(x_ini / dx);
-
-    particles.reserve(n);
-    for (int i = 0; i < n; ++i)
-    {
-      particle.seed = rnd_seed(p_seed);
-      particle.mu = 2 * rnd_real(&particle.seed) - 1;
-
-      assert(particle.index >= 0 &&
-             particle.index <= static_cast<int>(x_max / dx) &&
-             "Particle index should be in layer.");
-      assert(particle.wmc >= 0.0 && particle.wmc <= 1.0 &&
-             "Particle weight must be in [0, 1]");
-      particles.push_back(particle);
-    }
+    this->create_particles(MAX_PARTICLES_VECTOR);
   }
 }
 
-int Layer::particle_step(Particle &particle)
+void Layer::create_particles(int n)
 {
-  assert(particle.index >= index_start && particle.index < index_start + m &&
-         "Particle index should be in layer at call.");
+  if (nb_particles_create <= 0)
+    return;
 
-  const int index_local = particle.index - index_start;
+  /* how many particles to create */
+  int best_num_particles = MAX_PARTICLES_VECTOR - particles.size();
+  n = MAX(best_num_particles, n);  //only required to create at least n particles
+  n = MIN(nb_particles_create, n); // cannot create more than the layer offers
+  nb_particles_create -= n;
 
-  const real_t interaction_rate = 1.0 - absorption_rates[index_local];
-  const real_t sig_a = sigs[index_local] * absorption_rates[index_local];
-  const real_t sig_i = sigs[index_local] * interaction_rate;
+  Particle particle = Particle();
+  particle.x = x_ini;
+  particle.wmc = wmc;
 
-  // calculate theoretic movement
-  const real_t h = rnd_real(&particle.seed);
-  real_t di = sig_i > EPS_PRECISION ? -log(h) / sig_i : MAXREAL;
+  // compute index
+  particle.index = static_cast<int>(x_ini / dx);
 
-  // -- possible new cell --
-  int index_new;
-  real_t x_new_edge;
-
-  if (particle.mu < 0)
+  particles.reserve(particles.size() + n);
+  for (int i = 0; i < n; ++i)
   {
-    index_new = particle.index - 1;
-    x_new_edge = particle.index * dx;
-  }
-  else
-  {
-    index_new = particle.index + 1;
-    x_new_edge = (particle.index + 1) * dx;
-  }
-
-  real_t di_edge = MAXREAL;
-  if (particle.mu < -EPS_PRECISION || EPS_PRECISION < particle.mu)
-  {
-    di_edge = (x_new_edge - particle.x) / particle.mu;
-  }
-
-  if (di < di_edge)
-  {
-    /* move inside cell an draw new mu */
-    index_new = particle.index;
-    particle.x += di * particle.mu;
+    particle.seed = rnd_seed(&seed);
     particle.mu = 2 * rnd_real(&particle.seed) - 1;
+
+    assert(particle.index >= 0 &&
+           particle.index <= static_cast<int>(x_max / dx) &&
+           "Particle index should be in layer.");
+    assert(particle.wmc >= 0.0 && particle.wmc <= 1.0 &&
+           "Particle weight must be in [0, 1]");
+    particles.push_back(particle);
   }
-  else
-  {
-    /* set position to border */
-    di = di_edge;
-    particle.x = x_new_edge;
-  }
-
-  // -- Calculate amount of absorbed energy --
-  const real_t dw = (1 - expf(-sig_a * di)) * particle.wmc;
-
-  /* Weight removed from particle is added to the layer */
-  particle.wmc -= dw;
-  weights_absorbed[index_local] += dw;
-
-  particle.index = index_new;
-
-  assert(particle.x >= x_min - EPS_PRECISION &&
-         particle.x <= x_max + EPS_PRECISION &&
-         "Particle position should be in layer +/- eps at return.");
-  assert(particle.index >= index_start - 1 &&
-         particle.index <= index_start + m &&
-         "Particle index should be in layer +/- 1 at return.");
-  return index_new;
 }
 
-int Layer::particle_step_omp(Particle &particle, std::vector<real_t> &weights_absorbed_local)
+int Layer::particle_step(Particle &particle, std::vector<real_t> &weights_absorbed_local)
 {
   assert(particle.index >= index_start && particle.index < index_start + m &&
          "Particle index should be in layer at call.");
@@ -213,13 +171,13 @@ int Layer::particle_step_omp(Particle &particle, std::vector<real_t> &weights_ab
   return index_new;
 }
 
-int Layer::simulate_particle_omp(Particle &particle, std::vector<real_t> &weights_absorbed_local)
+int Layer::simulate_particle(Particle &particle, std::vector<real_t> &weights_absorbed_local)
 {
   while ((particle.wmc >= particle_min_weight) &&
          (particle.index < index_start + m) &&
          (particle.index >= index_start))
   {
-    particle_step_omp(particle, weights_absorbed_local);
+    particle_step(particle, weights_absorbed_local);
   }
 
   if (particle.index == index_start - 1)
@@ -237,59 +195,36 @@ int Layer::simulate_particle_omp(Particle &particle, std::vector<real_t> &weight
     return 0;
   }
 
-  return -2;
+  return -1;
 }
 
-void Layer::simulate(int nb_steps, std::vector<Particle> &particles_left,
-                     std::vector<Particle> &particles_right,
-                     std::vector<Particle> &particles_disabled)
+void Layer::simulate_helper(int nb_particles, int nthread)
 {
-  if (particles.empty())
+  if (nb_particles == -1)
   {
-    return;
-  }
-
-  int max_particles = std::max(static_cast<int>(particles.size()), nb_steps);
-  particles_left.reserve(particles_left.size() + max_particles / 2);
-  particles_right.reserve(particles_right.size() + max_particles / 2);
-  particles_disabled.reserve(particles_disabled.size() + max_particles / 2);
-
-  int index_new;
-  for (int i = 0; i < nb_steps && !particles.empty(); ++i)
-  {
-    index_new = particle_step(particles.back());
-
-    if (particles.back().wmc < particle_min_weight)
+    while ((particles.size() > 0) || (nb_particles_create > 0))
     {
-      /* disable */
-      particles_disabled.push_back(particles.back());
-      particles.pop_back();
-    }
-    else
-    {
-      if (index_new == index_start + m)
-      {
-        particles_right.push_back(particles.back());
-        particles.pop_back();
-      }
-      else if (index_new == index_start - 1)
-      {
-        particles_left.push_back(particles.back());
-        particles.pop_back();
-      }
+      simulate(MAX_PARTICLES_VECTOR, nthread);
     }
   }
-  particles_left.shrink_to_fit();
-  particles_right.shrink_to_fit();
-  particles_disabled.shrink_to_fit();
+
+  while ((nb_particles > 0) && (particles.size() > 0 || nb_particles_create > 0))
+  {
+    int nb_particles_this_call = MIN(nb_particles, MAX_PARTICLES_VECTOR);
+    simulate(nb_particles_this_call, nthread);
+    nb_particles -= nb_particles_this_call;
+  }
 }
 
-void Layer::simulate_omp(int nb_particles, std::vector<Particle> &particles_left, std::vector<Particle> &particles_right, std::vector<Particle> &particles_disabled)
+void Layer::simulate(int nb_particles, int nthread)
 {
-  if (particles.size() < nb_particles)
-  {
-    nb_particles = particles.size();
-  }
+  if ((nb_particles == -1) || (nb_particles > MAX_PARTICLES_VECTOR))
+    simulate_helper(nb_particles, nthread);
+
+  if ((particles.size() < nb_particles) && nb_particles_create > 0)
+    create_particles(nb_particles);
+
+  nb_particles = MIN(particles.size(), nb_particles);
 
   if (nb_particles <= 0)
   {
@@ -299,6 +234,11 @@ void Layer::simulate_omp(int nb_particles, std::vector<Particle> &particles_left
   int *const result = (int *)malloc(sizeof(int) * nb_particles);
   const int particles_size = particles.size();
 
+#ifdef _OPENMP
+  if (nthread > 0)
+    omp_set_num_threads(nthread);
+#endif
+
 #pragma omp parallel default(none) firstprivate(result, particles_size, nb_particles)
   {
     std::vector<real_t> weights_absorbed_local;
@@ -306,7 +246,7 @@ void Layer::simulate_omp(int nb_particles, std::vector<Particle> &particles_left
 #pragma omp for schedule(static)
     for (int i = 0; i < nb_particles; i++)
     {
-      result[i] = simulate_particle_omp(particles[particles_size - 1 - i], weights_absorbed_local);
+      result[i] = simulate_particle(particles[particles_size - 1 - i], weights_absorbed_local);
     }
 
 #pragma omp critical
@@ -329,15 +269,24 @@ void Layer::simulate_omp(int nb_particles, std::vector<Particle> &particles_left
       particles_right.push_back(particles[particles_size - 1 - i]);
       break;
     case 0:
-      particles_disabled.push_back(particles[particles_size - 1 - i]);
-      break;
-    default:
-      fprintf(stderr, "Particle with wrong behaviour!\n");
+      nb_disabled++;
       break;
     }
   }
 
   particles.resize(particles.size() - nb_particles);
+
+  if (left_border)
+  {
+    nb_disabled += particles_left.size();
+    particles_left.clear();
+  }
+
+  if (right_border)
+  {
+    nb_disabled += particles_right.size();
+    particles_right.clear();
+  }
 }
 
 void Layer::dump_WA()

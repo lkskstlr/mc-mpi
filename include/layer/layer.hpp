@@ -37,63 +37,71 @@ public:
    * \param[in] n number of partciles to create
    * \param[in] seed used
    */
-  void create_particles(real_t x_ini, real_t wmc, int n, seed_t *seed);
+  void create_particles(real_t x_ini, real_t wmc, int n, seed_t seed);
 
   /*!
    * \function simulate
    *
-   * \brief Simulates nb_steps steps of partcile movement choosing basically
-   * random particles from the domain. One particle will be simulated until it
-   * leaves the domain, then another one etc..
-   *
-   * \param[in] nb_steps Number of simulation steps
-   * \param[in] particles_left reference to the vector at wich the particles
-   * that leave the layer to the left (x_min) will be appended
-   * \param[in] particles_right reference to the vector at wich the particles
-   * that leave the layer to the right (x_max) will be appended
-   * \param[in] particles_disabled reference to the vector at wich the particles
-   * that fall below the min weight will be appended
-   */
-  void simulate(int nb_steps, std::vector<Particle> &particles_left,
-                std::vector<Particle> &particles_right,
-                std::vector<Particle> &particles_disabled);
-
-  /*!
-   * \function simulate_omp
-   *nonnegative
    * \brief Simulates nb_particles until they leave the domain or become inactive
    *
-   * \param[in] nb_particles Number of particles to simulate
-   * \param[in] particles_left reference to the vector at wich the particles
-   * that leave the layer to the left (x_min) will be appended
-   * \param[in] particles_right reference to the vector at wich the particles
-   * that leave the layer to the right (x_max) will be appended
-   * \param[in] particles_disabled reference to the vector at wich the particles
-   * that fall below the min weight will be appended
+   * \param[in] nb_particles Number of particles to simulate.
+   * Use -1 to simulate until all particles have left or became inactive.
+   * \param[in] nthread Number of OpenMP threads to use, optional (default = -1).
+   * If -1 is selected the OpenMP runtime decides, e.g. through OMP_NUM_THREADS.
+   * 
+   * \return void
    */
-  void simulate_omp(int nb_particles, std::vector<Particle> &particles_left,
-                    std::vector<Particle> &particles_right,
-                    std::vector<Particle> &particles_disabled);
-  int simulate_particle_omp(Particle &particle, std::vector<real_t> &weights_absorbed_local);
-  int particle_step_omp(Particle &particle, std::vector<real_t> &weights_absorbed_local);
+  void simulate(int nb_particles, int nthread = -1);
 
+  /*!
+   * \function dump_WA
+   *
+   * \brief Dump weights file to disk
+   * 
+   * \return void
+   */
   void dump_WA();
+
+  /*!
+   * \function nb_active
+   *
+   * \brief Returns number of particles active in this layer
+   * 
+   * \return int number of particles active in this layer
+   */
+  int nb_active() const;
+
+private:
+  void create_particles(int n);
+  int simulate_particle(Particle &particle, std::vector<real_t> &weights_absorbed_local);
+  int particle_step(Particle &particle, std::vector<real_t> &weights_absorbed_local);
+  void simulate_helper(int nb_particles, int nthread);
 
   // -- Data --
   const real_t x_min, x_max;
-  std::vector<Particle> particles;
+
+public:
   std::vector<real_t> weights_absorbed;
-
-  int particle_step(Particle &particle);
-
-  // private:
-  // -- physical properties --
+  std::vector<Particle> particles;
+  std::vector<Particle> particles_left;
+  std::vector<Particle> particles_right;
   const real_t dx;
+  int nb_disabled = 0;
+
+  const bool left_border, right_border;
+
+private:
+  // -- physical properties --
+
   const int m;
   const int index_start;
   std::vector<real_t> sigs; // = exp(-0.5*(x_min+x_max))
   std::vector<real_t> absorption_rates;
   const real_t particle_min_weight;
+
+  seed_t seed;
+  real_t x_ini, wmc;
+  int nb_particles_create = 0;
 };
 
 Layer decompose_domain(real_t x_min, real_t x_max, real_t x_ini, int world_size,

@@ -95,8 +95,8 @@ int main(int argc, char *argv[])
   constexpr real_t x_min = 0.0;
   constexpr real_t x_max = 1.0;
   const real_t x_ini = sqrtf(2.0) / 2.0;
-  constexpr int nb_cells_per_layer = 500;
-  constexpr int nb_particles = 1000000;
+  constexpr int nb_cells_per_layer = 1000;
+  constexpr int nb_particles = 10000000;
   constexpr real_t particle_min_weight = 1e-12;
 
   int nb_particles_per_cycle = nb_particles / 10;
@@ -130,11 +130,6 @@ int main(int argc, char *argv[])
                                nb_cells_per_layer, nb_particles,
                                particle_min_weight));
 
-  // Generate vectors for the particles that exit through the left, right, and the ones that get disabled
-  std::vector<Particle> particles_send_left;
-  std::vector<Particle> particles_send_right;
-  std::vector<Particle> particles_disabled;
-
   int unfinished_flag = 1;
   int disabled_own, disabled_all;
   int old_size, recv_count, temp = 0, i = 0;
@@ -143,20 +138,8 @@ int main(int argc, char *argv[])
 
   while (unfinished_flag)
   {
+    layer.simulate(nb_particles_per_cycle);
 
-    layer.simulate_omp(nb_particles_per_cycle, particles_send_left, particles_send_right, particles_disabled);
-
-    // Boundary
-    if (world_rank == 0)
-    {
-      particles_disabled.insert(particles_disabled.end(), particles_send_left.begin(), particles_send_left.end());
-      particles_send_left.clear();
-    }
-    if (world_rank + 1 == world_size)
-    {
-      particles_disabled.insert(particles_disabled.end(), particles_send_right.begin(), particles_send_right.end());
-      particles_send_right.clear();
-    }
     //Prepare the particles vector for the extra ones from the left OR right, which are AT MOST nb_particles_per_cycle
     old_size = layer.particles.size();
     layer.particles.resize(layer.particles.size() + nb_particles_per_cycle);
@@ -165,21 +148,21 @@ int main(int argc, char *argv[])
     if ((world_rank % 2) && (world_rank + 1 < world_size))
     {
       //ODD
-      MPI_Sendrecv(particles_send_right.data(), particles_send_right.size(), mpi_particle_type, world_rank + 1, particle_tag,
+      MPI_Sendrecv(layer.particles_right.data(), layer.particles_right.size(), mpi_particle_type, world_rank + 1, particle_tag,
                    layer.particles.data() + old_size, nb_particles_per_cycle, mpi_particle_type, world_rank + 1, particle_tag,
                    MPI_COMM_WORLD, &status);
-      temp = particles_send_right.size();
-      particles_send_right.clear();
+      temp = layer.particles_right.size();
+      layer.particles_right.clear();
       MPI_Get_count(&status, mpi_particle_type, &recv_count);
     }
     if (!(world_rank % 2) && (world_rank > 0))
     {
       //EVEN
-      MPI_Sendrecv(particles_send_left.data(), particles_send_left.size(), mpi_particle_type, world_rank - 1, particle_tag,
+      MPI_Sendrecv(layer.particles_left.data(), layer.particles_left.size(), mpi_particle_type, world_rank - 1, particle_tag,
                    layer.particles.data() + old_size, nb_particles_per_cycle, mpi_particle_type, world_rank - 1, particle_tag,
                    MPI_COMM_WORLD, &status);
-      temp = particles_send_left.size();
-      particles_send_left.clear();
+      temp = layer.particles_left.size();
+      layer.particles_left.clear();
       MPI_Get_count(&status, mpi_particle_type, &recv_count);
     }
 
@@ -192,27 +175,27 @@ int main(int argc, char *argv[])
     if (!(world_rank % 2) && (world_rank + 1 < world_size))
     {
       //EVEN
-      MPI_Sendrecv(particles_send_right.data(), particles_send_right.size(), mpi_particle_type, world_rank + 1, particle_tag,
+      MPI_Sendrecv(layer.particles_right.data(), layer.particles_right.size(), mpi_particle_type, world_rank + 1, particle_tag,
                    layer.particles.data() + old_size, nb_particles_per_cycle, mpi_particle_type, world_rank + 1, particle_tag,
                    MPI_COMM_WORLD, &status);
-      temp = particles_send_right.size();
-      particles_send_right.clear();
+      temp = layer.particles_right.size();
+      layer.particles_right.clear();
       MPI_Get_count(&status, mpi_particle_type, &recv_count);
     }
     if (world_rank % 2)
     {
       //ODD
-      MPI_Sendrecv(particles_send_left.data(), particles_send_left.size(), mpi_particle_type, world_rank - 1, particle_tag,
+      MPI_Sendrecv(layer.particles_left.data(), layer.particles_left.size(), mpi_particle_type, world_rank - 1, particle_tag,
                    layer.particles.data() + old_size, nb_particles_per_cycle, mpi_particle_type, world_rank - 1, particle_tag,
                    MPI_COMM_WORLD, &status);
-      temp = particles_send_left.size();
-      particles_send_left.clear();
+      temp = layer.particles_left.size();
+      layer.particles_left.clear();
       MPI_Get_count(&status, mpi_particle_type, &recv_count);
     }
 
     layer.particles.resize(old_size + recv_count);
 
-    disabled_own = particles_disabled.size();
+    disabled_own = layer.nb_disabled;
     MPI_Allreduce(&disabled_own, &disabled_all, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
     if (disabled_all == nb_particles)
       unfinished_flag = 0;

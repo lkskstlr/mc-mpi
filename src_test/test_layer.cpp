@@ -4,13 +4,16 @@
 #include <string.h>
 #include "layer.hpp"
 
-void compareFiles(FILE *fp1, FILE *fp2) {
+void compareFiles(FILE *fp1, FILE *fp2)
+{
   char ch1 = getc(fp1);
   char ch2 = getc(fp2);
 
   // iterate loop till end of file
-  while (ch1 != EOF && ch2 != EOF) {
-    if (ch1 != ch2) {
+  while (ch1 != EOF && ch2 != EOF)
+  {
+    if (ch1 != ch2)
+    {
       fclose(fp1);
       fclose(fp2);
       printf("ERROR: Output files are not identical!\n");
@@ -22,7 +25,8 @@ void compareFiles(FILE *fp1, FILE *fp2) {
     ch2 = getc(fp2);
   }
 
-  if (!(ch1 == EOF && ch2 == EOF)) {
+  if (!(ch1 == EOF && ch2 == EOF))
+  {
     fclose(fp1);
     fclose(fp2);
     printf("ERROR: Output files are not identical!\n");
@@ -30,7 +34,8 @@ void compareFiles(FILE *fp1, FILE *fp2) {
   }
 }
 
-int main(int argc, char const *argv[]) {
+int main(int argc, char const *argv[])
+{
   constexpr real_t x_min = 0.0;
   constexpr real_t x_max = 1.0;
   const real_t x_ini = sqrtf(2.0) / 2.0;
@@ -44,18 +49,15 @@ int main(int argc, char const *argv[]) {
                                nb_cells_per_layer, nb_particles,
                                particle_min_weight));
 
-  std::vector<Particle> particles_left;
-  std::vector<Particle> particles_right;
-  std::vector<Particle> particles_disabled;
-  layer.simulate(1000000000, particles_left, particles_right,
-                 particles_disabled);
+  layer.simulate(-1); // simulate until end
   layer.dump_WA();
 
   // Compare
   FILE *fp1 = fopen("../src_test/test_layer_target_WA.out", "r");
   FILE *fp2 = fopen("WA.out", "r");
 
-  if (fp1 == NULL || fp2 == NULL) {
+  if (fp1 == NULL || fp2 == NULL)
+  {
     printf("Error : Couldn't open files\n");
     exit(1);
   }

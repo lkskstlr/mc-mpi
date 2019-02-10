@@ -38,7 +38,7 @@ void RmaComm<T>::init_1d(int buffer_size)
     /* Odd <-> Even*/
     if (ODD(world_rank) && (world_rank + 1 < world_size))
         connect(world_rank + 1);
-    if (Even(world_rank) && (world_rank > 0))
+    if (EVEN(world_rank) && (world_rank > 0))
         connect(world_rank - 1);
 }
 

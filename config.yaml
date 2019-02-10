@@ -3,8 +3,9 @@ x_min: 0.000000000000000000e+00
 x_max: 1.000000000000000000e+00
 x_ini: 7.071067690849304199e-01
 particle_min_weight: 9.999999960041972003e-13
-nb_particles: 1000000
+nb_particles: 100000000
 buffer_size: 1000000000
 cycle_time: 1.e-03
-cycle_nb_steps: 200000
+nb_particles_per_cycle: 100000
+nthread: -1
 statistics_cycle_time: 1.e-1
