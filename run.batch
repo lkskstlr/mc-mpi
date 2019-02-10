@@ -1,0 +1,6 @@
+#!/bin/bash
+
+#SBATCH -n 10
+#SBATCH -N 5
+
+mpirun ./main ../config.yaml
