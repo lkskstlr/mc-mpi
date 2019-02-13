@@ -201,15 +201,15 @@ target_link_libraries(test_layer
 
 
 
-# add_executable(test_layer_perf src_test/test_layer_perf.cpp)
-# set_target_properties(test_layer_perf PROPERTIES
-#   CXX_STANDARD 11
-#   CXX_STANDARD_REQUIRED YES
-#   CXX_EXTENSIONS NO
-# )
-# target_link_libraries(test_layer_perf
-#   layer
-# )
+add_executable(test_layer_perf src_test/test_layer_perf.cpp)
+set_target_properties(test_layer_perf PROPERTIES
+  CXX_STANDARD 11
+  CXX_STANDARD_REQUIRED YES
+  CXX_EXTENSIONS NO
+)
+target_link_libraries(test_layer_perf
+  layer
+)
 
 # add_executable(test_layer_omp_perf src_test/test_layer_omp_perf.cpp)
 # set_target_properties(test_layer_omp_perf PROPERTIES
