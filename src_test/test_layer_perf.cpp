@@ -22,21 +22,11 @@ int main(int argc, char const *argv[])
                                nb_cells_per_layer, nb_particles,
                                particle_min_weight));
 
-  std::vector<Particle> particles_left;
-  std::vector<Particle> particles_right;
-  std::vector<Particle> particles_disabled;
-
   auto start = high_resolution_clock::now();
-  layer.simulate(1000000000, particles_left, particles_right,
-                 particles_disabled);
+  layer.simulate(-1, 1);
   auto finish = high_resolution_clock::now();
 
   layer.dump_WA();
-
-  // Compare
-  //
-  printf("%zu, %zu, %zu\n%zu\n", particles_left.size(), particles_right.size(),
-         particles_disabled.size(), layer.particles.size());
 
   std::chrono::duration<double, std::milli> elapsed = finish - start;
   printf("Time = %f s\n", elapsed.count() / 1e3);
