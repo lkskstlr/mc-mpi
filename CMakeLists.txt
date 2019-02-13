@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.2 FATAL_ERROR)
-project(mc-mpi CXX)
+project(mc-mpi C CXX)
 
 if(NOT WIN32)
   string(ASCII 27 Esc)
@@ -130,26 +130,32 @@ target_link_libraries(main
 
 
 
-# ########## Tests ##########
-# add_executable(test_comm src_test/test_comm.cpp)
-# set_target_properties(test_comm PROPERTIES
-#   CXX_STANDARD 11
-#   CXX_STANDARD_REQUIRED YES
-#   CXX_EXTENSIONS NO
-# )
-# target_link_libraries(test_comm
-#   comm
-# )
+########## Tests ##########
+add_executable(test_comm src_test/test_comm.cpp)
+set_target_properties(test_comm PROPERTIES
+  CXX_STANDARD 11
+  CXX_STANDARD_REQUIRED YES
+  CXX_EXTENSIONS NO
+)
+target_link_libraries(test_comm
+  comm
+)
 
-# add_executable(test_rma_comm src_test/test_rma_comm.cpp)
-# set_target_properties(test_rma_comm PROPERTIES
-#   CXX_STANDARD 11
-#   CXX_STANDARD_REQUIRED YES
-#   CXX_EXTENSIONS NO
-# )
-# target_link_libraries(test_rma_comm
-#   comm
-# )
+add_executable(test_rma_comm src_test/test_rma_comm.cpp)
+set_target_properties(test_rma_comm PROPERTIES
+  CXX_STANDARD 11
+  CXX_STANDARD_REQUIRED YES
+  CXX_EXTENSIONS NO
+)
+target_link_libraries(test_rma_comm
+  comm
+)
+
+add_executable(rma_minimal_working_example src_test/rma_minimal_working_example.c)
+set_target_properties(rma_minimal_working_example PROPERTIES
+  C_STANDARD 99
+  C_STANDARD_REQUIRED YES
+)
 
 # add_executable(test_state_comm src_test/test_state_comm.cpp)
 # set_target_properties(test_state_comm PROPERTIES
