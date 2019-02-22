@@ -19,116 +19,8 @@ Worker::Worker(int world_rank, const MCMPIOptions &options)
                              options.world_size, world_rank,
                              options.nb_cells_per_layer, options.nb_particles,
                              options.particle_min_weight)),
-      particle_comm(world_rank, options.buffer_size),
-      state_comm(options.world_size, world_rank, MCMPIOptions::Tag::State,
-                 [nb_particles = options.nb_particles](std::vector<int> msgs) {
-                   int sum = std::accumulate(msgs.begin(), msgs.end(), 0);
-                   if (sum == nb_particles)
-                   {
-                     return StateComm::State::Finished;
-                   }
-                   return StateComm::State::Running;
-                 }),
       timer()
 {
-  /* Time */
-  if (world_rank == 0)
-  {
-    unix_timestamp_start = (unsigned long)time(NULL);
-  }
-  /* reserve */
-  timer_states.reserve(100);
-  stats_states.reserve(100);
-  cycle_states.reserve(100);
-}
-
-void Worker::spin()
-{
-  using std::chrono::high_resolution_clock;
-
-  auto timestamp = timer.start(Timer::Tag::Idle);
-
-  auto start = high_resolution_clock::now();
-  auto finish = high_resolution_clock::now();
-
-  bool flag = true;
-  int nb_cycles_stats = 0;
-  while (flag)
-  {
-    start = high_resolution_clock::now();
-
-    /* Simulate Particles */
-    timer.change(timestamp, Timer::Tag::Computation);
-    {
-      layer.simulate(options.nb_particles_per_cycle, options.nthread);
-    }
-
-    /* Sending Particles */
-    timer.change(timestamp, Timer::Tag::Send);
-    {
-      particle_comm.send(layer.particles_left, world_rank - 1,
-                         MCMPIOptions::Tag::Particle);
-      particle_comm.send(layer.particles_right, world_rank + 1,
-                         MCMPIOptions::Tag::Particle);
-    }
-
-    /* Receive Particles */
-    timer.change(timestamp, Timer::Tag::Recv);
-    {
-      // recv
-      particle_comm.recv(layer.particles, MPI_ANY_SOURCE,
-                         MCMPIOptions::Tag::Particle);
-    }
-
-    /* Send Events */
-    timer.change(timestamp, Timer::Tag::Send);
-    {
-      state_comm.send_msg(layer.nb_disabled);
-      state_comm.send_state();
-    }
-
-    /* Receive Events */
-    timer.change(timestamp, Timer::Tag::Recv);
-    {
-      if (state_comm.recv_state() == StateComm::State::Finished)
-      {
-        flag = false;
-        break;
-      }
-    }
-
-    /* Timer State */
-    if (timer.time() > timer.starttime() + options.statistics_cycle_time)
-    {
-      timer_states.push_back(timer.restart(timestamp, Timer::Tag::Idle));
-      stats_states.push_back(particle_comm.reset_stats() +
-                             state_comm.reset_stats());
-      cycle_states.push_back(nb_cycles_stats);
-      nb_cycles_stats = 0;
-    }
-
-    /* Idle */
-    timer.change(timestamp, Timer::Tag::Idle);
-    {
-      finish = high_resolution_clock::now();
-      std::chrono::duration<double, std::milli> elapsed = finish - start;
-      if (elapsed.count() < options.cycle_time * 1e3)
-      {
-        auto sleep_length = std::chrono::duration<double, std::milli>(
-                                options.cycle_time * 1e3) -
-                            elapsed;
-        std::this_thread::sleep_for(sleep_length);
-      }
-    }
-
-    nb_cycles_stats++;
-  }
-
-  timer_states.push_back(timer.stop(timestamp));
-  stats_states.push_back(particle_comm.reset_stats() +
-                         state_comm.reset_stats());
-  cycle_states.push_back(nb_cycles_stats);
-  return;
 }
 
 void Worker::dump()
@@ -139,17 +31,11 @@ void Worker::dump()
 
   gather_weights_absorbed(&total_len, &displs, &weights);
 
-  // Max Used Buffersize
-  unsigned long max_used_buffer = particle_comm.get_max_used_buffer();
-  unsigned long max_used_buffer_global;
-  MPI_Reduce(&max_used_buffer, &max_used_buffer_global, 1,
-             MPI_UNSIGNED_LONG_LONG, MPI_MAX, 0, MPI_COMM_WORLD);
-
   if (world_rank == 0)
   {
     mkdir_out();
 
-    dump_config(max_used_buffer_global);
+    dump_config();
     dump_weights_absorbed(total_len, displs, weights);
     layer.dump_WA();
   }
@@ -174,16 +60,20 @@ void Worker::write_file(char *filename)
   if (world_rank == 0)
   {
     offset += sprintf(buf + offset, "rank, ");
-    offset += Timer::State::sprintf_header(buf + offset);
-    offset += Stats::State::sprintf_header(buf + offset);
+    if (timer_states.size() > 0)
+      offset += Timer::State::sprintf_header(buf + offset);
+    if (stats_states.size() > 0)
+      offset += Stats::State::sprintf_header(buf + offset);
     offset += sprintf(buf + offset, "nb_cycles, \n");
   }
 
   for (int i = 0; i < timer_states.size(); ++i)
   {
     offset += sprintf(buf + offset, "%d, ", world_rank);
-    offset += timer_states[i].sprintf(buf + offset);
-    offset += stats_states[i].sprintf(buf + offset);
+    if (timer_states.size() > 0)
+      offset += timer_states[i].sprintf(buf + offset);
+    if (stats_states.size() > 0)
+      offset += stats_states[i].sprintf(buf + offset);
     offset += sprintf(buf + offset, "%d, \n", cycle_states[i]);
   }
 
@@ -258,7 +148,7 @@ void Worker::gather_weights_absorbed(int *total_len, int **displs,
               recvcounts, *displs, MCMPI_REAL_T, 0, MPI_COMM_WORLD);
 }
 
-void Worker::dump_config(int max_used_buffer)
+void Worker::dump_config()
 {
   YamlDumper yaml_dumper("out/config.yaml");
   yaml_dumper.comment("Read from config");
@@ -277,11 +167,9 @@ void Worker::dump_config(int max_used_buffer)
   yaml_dumper.new_line();
   yaml_dumper.comment("Other values");
   yaml_dumper.dump_int("world_size", options.world_size);
-  yaml_dumper.dump_unsigned_long("unix_timestamp_start", unix_timestamp_start);
   char _hostname[1000];
   gethostname(_hostname, 1000);
   yaml_dumper.dump_string("hostname", _hostname);
-  yaml_dumper.dump_int("max_used_buffer", max_used_buffer);
 }
 
 std::vector<real_t> Worker::weights_absorbed()
@@ -328,33 +216,6 @@ void Worker::mkdir_out()
   mkdir("out", S_IRWXU | S_IRWXG | S_IRWXO);
 }
 
-// void Worker::dump_stats(int total_len, int const *displs,
-//                         Timer::State const *states) {
-//   FILE *file;
-//   file = fopen("out/times.csv", "w");
-//   if (!file) {
-//     fprintf(stderr, "Couldn't open file out/times.csv for writing.\n");
-//     exit(1);
-//   }
-
-//   fprintf(file, "proc, starttime, endtime, state_comp, state_send, "
-//                 "state_recv, state_idle\n");
-//   int proc = 0;
-//   for (int i = 0; i < total_len; ++i) {
-//     if (proc < options.world_size - 1 && displs[proc + 1] == i) {
-//       proc++;
-//     }
-//     fprintf(file, "%d, %.18e, %.18e, %.18e, %.18e, %.18e, %.18e\n", proc,
-//             states[i].starttime, states[i].endtime,
-//             states[i].cumm_times[Timer::Tag::Computation],
-//             states[i].cumm_times[Timer::Tag::Send],
-//             states[i].cumm_times[Timer::Tag::Recv],
-//             states[i].cumm_times[Timer::Tag::Idle]);
-//   }
-
-//   fclose(file);
-// }
-
 void Worker::dump_weights_absorbed(int total_len, int const *displs,
                                    real_t const *weights)
 {
@@ -382,8 +243,7 @@ void Worker::dump_weights_absorbed(int total_len, int const *displs,
   fclose(file);
 }
 
-Worker worker_from_config(std::string filepath, int world_size,
-                          int world_rank)
+MCMPIOptions options_from_config(std::string filepath, int world_size)
 {
   YamlLoader yaml_loader(filepath);
   // // constants
@@ -401,5 +261,5 @@ Worker worker_from_config(std::string filepath, int world_size,
   opt.nthread = yaml_loader.load_int("nthread");
   opt.statistics_cycle_time = yaml_loader.load_double("statistics_cycle_time");
 
-  return Worker(world_rank, opt);
+  return opt;
 }

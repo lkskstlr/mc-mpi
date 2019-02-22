@@ -11,7 +11,7 @@ data['data_w'] = np.genfromtxt('tex/data/WA_1000_1000000.out', delimiter=' ')
 
 df_w = data['df_w']
 data_w = data['data_w']
-plt.figure(figsize=(20,20))
+plt.figure(figsize=(10,10))
 plt.plot(df_w['x'], df_w['weight'], '+-', label="parallel")
 plt.plot(data_w[:, 0], data_w[:, 1], 'm--.', label="sequential (reference)")
 plt.title("Weights after Simulation")

@@ -92,7 +92,11 @@ set_target_properties(comm PROPERTIES
 target_link_libraries(comm PUBLIC types)
 
 
-add_library(mcmpi SHARED src/worker.cpp)
+add_library(mcmpi SHARED
+  src/worker.cpp
+  src/worker_sync.cpp
+  src/worker_async.cpp
+)
 target_include_directories(mcmpi PUBLIC include/mcmpi)
 set_target_properties(mcmpi PROPERTIES
   CXX_STANDARD 11

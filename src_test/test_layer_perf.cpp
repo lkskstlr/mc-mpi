@@ -23,7 +23,7 @@ int main(int argc, char const *argv[])
                                particle_min_weight));
 
   auto start = high_resolution_clock::now();
-  layer.simulate(-1, 1);
+  layer.simulate(-1);
   auto finish = high_resolution_clock::now();
 
   layer.dump_WA();

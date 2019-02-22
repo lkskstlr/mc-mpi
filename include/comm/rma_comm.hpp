@@ -8,12 +8,10 @@
 #include <vector>
 
 template <typename T>
-class RmaComm
-{
-protected:
-  typedef uint64_t state_t; // Has to match mpi_state_t
-  typedef struct buffer_info_tag
-  {
+class RmaComm {
+ public:
+  typedef uint64_t state_t;  // Has to match mpi_state_t
+  typedef struct buffer_info_tag {
     MPI_Win win_state;
     state_t *p_state;
 
@@ -22,14 +20,15 @@ protected:
     int size;
   } BufferInfo;
 
-public:
+ public:
   /*!
    * \function init
    *
    * \brief Initializes the communicator
    *
    * \param[in] buffer_size Size of one buffer line used.
-   * Max number of elements that can be send in one message. buffer_size <= 2^16 - 1 = 65535
+   * Max number of elements that can be send in one message. buffer_size <= 2^16
+   * - 1 = 65535
    *
    * \return void
    */
@@ -38,10 +37,12 @@ public:
   /*!
    * \function init_1d
    *
-   * \brief Initializes the communicator. Also builds all connections for 1d mesh.
+   * \brief Initializes the communicator. Also builds all connections for 1d
+   * mesh.
    *
    * \param[in] buffer_size Size of one buffer line used.
-   * Max number of elements that can be send in one message. buffer_size <= 2^16 - 1 = 65535
+   * Max number of elements that can be send in one message. buffer_size <= 2^16
+   * - 1 = 65535
    *
    * \return void
    */
@@ -54,7 +55,8 @@ public:
    * Each advertise call MUST be met by a subscribe call on process target_rank
    * Prefer connect function.
    *
-   * \param[in] target_rank Rank of the process (in MPI_COMM_WORLD) to later send data to
+   * \param[in] target_rank Rank of the process (in MPI_COMM_WORLD) to later
+   * send data to
    *
    * \return void
    */
@@ -66,8 +68,9 @@ public:
    * \brief Subscribe (i.e. later recv) a connection from source_rank
    * Each subscribe call MUST be met by an advertise call on process source_rank
    * Prefer connect function.
-   * 
-   * \param[in] source_rank Rank of the process (in MPI_COMM_WORLD) to later recv data from
+   *
+   * \param[in] source_rank Rank of the process (in MPI_COMM_WORLD) to later
+   * recv data from
    *
    * \return void
    */
@@ -77,9 +80,10 @@ public:
    * \function connect
    *
    * \brief Connect (i.e. later send and recv) with target_rank
-   * 
-   * \param[in] target_rank Rank of the process (in MPI_COMM_WORLD) to later send data to and recv data from
-   * 
+   *
+   * \param[in] target_rank Rank of the process (in MPI_COMM_WORLD) to later
+   * send data to and recv data from
+   *
    * \return void
    */
   void connect(int target_rank);
@@ -115,20 +119,20 @@ public:
    * \function print
    *
    * \brief Print current state of buffers to std::cout
-   * 
+   *
    * \return void
    */
   void print();
 
-private:
+ public:
   int world_size, world_rank;
   int buffer_size;
   std::map<int, MPI_Comm> comms;
   std::map<int, BufferInfo> recv_buffer_infos;
   std::map<int, BufferInfo> send_buffer_infos;
 
-public:
+ public:
   MPI_Datatype mpi_data_t;
-  const MPI_Datatype mpi_state_t = MPI_UINT64_T; // Has to match state_t
+  const MPI_Datatype mpi_state_t = MPI_UINT64_T;  // Has to match state_t
 };
 #endif
