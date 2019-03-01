@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-void compareFiles(FILE *fp1, FILE *fp2) {
+int compareFiles(FILE *fp1, FILE *fp2) {
   char ch1 = getc(fp1);
   char ch2 = getc(fp2);
 
@@ -14,7 +14,7 @@ void compareFiles(FILE *fp1, FILE *fp2) {
       fclose(fp1);
       fclose(fp2);
       printf("ERROR: Output files are not identical!\n");
-      exit(1);
+      return 1;
     }
 
     // fetching character until end of file
@@ -26,8 +26,10 @@ void compareFiles(FILE *fp1, FILE *fp2) {
     fclose(fp1);
     fclose(fp2);
     printf("ERROR: Output files are not identical!\n");
-    exit(1);
+    return 1;
   }
+
+  return 0;
 }
 
 int main(int argc, char const *argv[]) {
@@ -48,21 +50,21 @@ int main(int argc, char const *argv[]) {
   layer.dump_WA();
 
   // Compare
-  FILE *fp1 = fopen("../src_test/test_layer_target_WA.out", "r");
+  FILE *fp1 = fopen("../data/test_layer_target_WA.out", "r");
   FILE *fp2 = fopen("WA.out", "r");
 
   if (fp1 == NULL || fp2 == NULL) {
     printf("Error : Couldn't open files\n");
+    remove("WA.out");
     exit(1);
   }
 
-  compareFiles(fp1, fp2);
+  int result = compareFiles(fp1, fp2);
 
   // closing both file
   fclose(fp1);
   fclose(fp2);
+  remove("WA.out");
 
-  printf("CORRECT\n");
-  exit(0);
-  return 0;
+  return result;
 }

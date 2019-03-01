@@ -1,4 +1,4 @@
-#include "particle_rma_comm.hpp"
+#include "particle_async_comm.hpp"
 #include "types.hpp"
 #include <iostream>
 #include <mpi.h>
@@ -23,11 +23,8 @@ int main(int argc, char const *argv[]) {
   MPI_Comm_size(MPI_COMM_WORLD, &world_size);
   MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
 
-  ParticleRmaComm comm(world_rank, -1);
-  if (world_rank == 0)
-    comm.connect(1);
-  else
-    comm.connect(0);
+  size_t max_buffer_size = 10 * sizeof(Particle);
+  ParticleAsyncComm comm(world_rank, max_buffer_size);
 
   Particle p{5127801, 0.172634512365276, 123.12342351, -1231.123486123,
              2134512};
@@ -35,13 +32,12 @@ int main(int argc, char const *argv[]) {
 
   bool flag_success = false;
   if (world_rank == 1) {
-    std::vector<Particle> tmp = {p};
-    comm.send(tmp, 0);
+    comm.send(p, 0, 0);
   } else {
     std::vector<Particle> recv_particles;
 
     do {
-      comm.recv(recv_particles, 1);
+      comm.recv(recv_particles, MPI_ANY_SOURCE, MPI_ANY_TAG);
     } while (recv_particles.size() == 0);
 
     Particle p2 = recv_particles.back();
@@ -56,13 +52,8 @@ int main(int argc, char const *argv[]) {
 
   MPI_Barrier(MPI_COMM_WORLD);
   if (world_rank == 0) {
-    if (flag_success) {
-      std::cout << "CORRECT" << std::endl;
-    } else {
-      std::cout << "ERROR: hash values are not identical. Serialization does "
-                   "not work!"
-                << std::endl;
-    }
+    if (!flag_success)
+      exit(EXIT_FAILURE);
   }
 
   MPI_Finalize();

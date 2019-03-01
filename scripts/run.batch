@@ -3,4 +3,4 @@
 #SBATCH -n 5
 #SBATCH -N 5
 
-mpirun ./main ../config.yaml async
+mpirun ./main ../config.yaml sync

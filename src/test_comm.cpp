@@ -39,9 +39,6 @@ int main(int argc, char const *argv[]) {
     }
   }
 
-  if (world_rank == 0) {
-    std::cout << "CORRECT" << std::endl;
-  }
   MPI_Finalize();
   return 0;
 }

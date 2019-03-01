@@ -36,11 +36,6 @@ int main(int argc, char const *argv[]) {
     }
   }
 
-  MPI_Barrier(MPI_COMM_WORLD);
-  if (world_rank == 0) {
-    std::cout << "CORRECT" << std::endl;
-  }
   MPI_Finalize();
-
   return 0;
 }

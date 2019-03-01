@@ -9,8 +9,10 @@ RelWithDebInfo MinSizeRel."
   message(STATUS "Setting Build Type to Release (default)")
 endif(NOT CMAKE_BUILD_TYPE)
 
-
+########## Global Compile Flags ##########
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror -pedantic")
+set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -Wall -Werror -pedantic")
+
 
 ########## Required Packages ##########
 find_package(OpenMP REQUIRED)
@@ -115,6 +117,7 @@ target_link_libraries(mcmpi
 
 ########## Scripts ##########
 configure_file(scripts/save_run save_run COPYONLY)
+configure_file(scripts/run.batch run.batch COPYONLY)
 
 
 
@@ -128,8 +131,8 @@ set_target_properties(main PROPERTIES
 target_link_libraries(main PRIVATE mcmpi)
 
 
-########## Tests ##########
-add_executable(test_comm src_test/test_comm.cpp)
+########## Test Executables ##########
+add_executable(test_comm src/test_comm.cpp)
 set_target_properties(test_comm PROPERTIES
   CXX_STANDARD 11
   CXX_STANDARD_REQUIRED YES
@@ -141,7 +144,7 @@ target_link_libraries(test_comm PRIVATE
 )
 
 
-add_executable(test_state_comm src_test/test_state_comm.cpp)
+add_executable(test_state_comm src/test_state_comm.cpp)
 set_target_properties(test_state_comm PROPERTIES
   CXX_STANDARD 11
   CXX_STANDARD_REQUIRED YES
@@ -154,7 +157,7 @@ target_link_libraries(test_state_comm PRIVATE
 
 
 add_executable(test_async_serialization
-  src_test/test_async_serialization.cpp
+  src/test_async_serialization.cpp
 )
 set_target_properties(test_async_serialization PROPERTIES
   CXX_STANDARD 11
@@ -168,7 +171,7 @@ target_link_libraries(test_async_serialization PRIVATE
 
 
 add_executable(test_rma_serialization
-  src_test/test_rma_serialization.cpp
+  src/test_rma_serialization.cpp
 )
 set_target_properties(test_rma_serialization PROPERTIES
   CXX_STANDARD 11
@@ -181,7 +184,7 @@ target_link_libraries(test_rma_serialization PRIVATE
 )
 
 
-add_executable(test_layer src_test/test_layer.cpp)
+add_executable(test_layer src/test_layer.cpp)
 set_target_properties(test_layer PROPERTIES
   CXX_STANDARD 11
   CXX_STANDARD_REQUIRED YES
@@ -192,7 +195,7 @@ target_link_libraries(test_layer
 )
 
 
-add_executable(test_layer_perf src_test/test_layer_perf.cpp)
+add_executable(test_layer_perf src/test_layer_perf.cpp)
 set_target_properties(test_layer_perf PROPERTIES
   CXX_STANDARD 11
   CXX_STANDARD_REQUIRED YES
@@ -201,3 +204,19 @@ set_target_properties(test_layer_perf PROPERTIES
 target_link_libraries(test_layer_perf
   layer
 )
+
+########## CTest ##########
+enable_testing()
+add_test(NAME TestLayer COMMAND test_layer)
+
+add_test(NAME TestComm COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2 ${MPIEXEC_PREFLAGS} test_comm ${MPIEXEC_POSTFLAGS})
+set_tests_properties(TestComm PROPERTIES TIMEOUT 2)
+
+add_test(NAME TestStateComm COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2 ${MPIEXEC_PREFLAGS} test_state_comm ${MPIEXEC_POSTFLAGS})
+set_tests_properties(TestStateComm PROPERTIES TIMEOUT 2)
+
+add_test(NAME TestAsyncSerialization COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2 ${MPIEXEC_PREFLAGS} test_async_serialization ${MPIEXEC_POSTFLAGS})
+set_tests_properties(TestAsyncSerialization PROPERTIES TIMEOUT 2)
+
+add_test(NAME TestRmaSerialization COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2 ${MPIEXEC_PREFLAGS} test_rma_serialization ${MPIEXEC_POSTFLAGS})
+set_tests_properties(TestRmaSerialization PROPERTIES TIMEOUT 2)
