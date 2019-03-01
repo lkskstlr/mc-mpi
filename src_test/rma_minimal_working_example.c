@@ -41,7 +41,8 @@ int main(int argc, char **argv) {
 
   if (world_rank == 1) {
     ptr = (int *)malloc(sizeof(int) * nb_int);
-    for (int i = 0; i < nb_int; i++) ptr[i] = (i * i * i) % (31);
+    for (int i = 0; i < nb_int; i++)
+      ptr[i] = (i * i * i) % (31);
 
     double t0, t1, t2, t3;
     t0 = MPI_Wtime();
@@ -62,7 +63,8 @@ int main(int argc, char **argv) {
   MPI_Barrier(MPI_COMM_WORLD);
   usleep(10000 * (1 + world_rank));
   int sum = 0;
-  for (int i = 0; i < nb_int; i++) sum += ptr[i];
+  for (int i = 0; i < nb_int; i++)
+    sum += ptr[i];
 
   printf("%d/%d sum = %d\n", world_rank, world_size, sum);
 

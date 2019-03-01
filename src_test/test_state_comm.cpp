@@ -1,8 +1,8 @@
-#include <mpi.h>
-#include <unistd.h>
-#include <iostream>
-#include <numeric>
 #include "state_comm.hpp"
+#include <iostream>
+#include <mpi.h>
+#include <numeric>
+#include <unistd.h>
 
 int main(int argc, char const *argv[]) {
   // -- MPI Setup --

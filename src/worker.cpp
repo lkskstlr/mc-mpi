@@ -1,38 +1,33 @@
 #include "worker.hpp"
+#include "yaml_dumper.hpp"
+#include "yaml_loader.hpp"
+#include <chrono>
+#include <cstring>
 #include <dirent.h>
+#include <numeric>
 #include <stdio.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <thread>
 #include <time.h>
 #include <unistd.h>
-#include <chrono>
-#include <cstring>
-#include <numeric>
-#include <thread>
-#include "yaml_dumper.hpp"
-#include "yaml_loader.hpp"
 
 Worker::Worker(int world_rank, const MCMPIOptions &options)
-    : world_rank(world_rank),
-      options(options),
+    : world_rank(world_rank), options(options),
       layer(decompose_domain(options.x_min, options.x_max, options.x_ini,
                              options.world_size, world_rank,
                              options.nb_cells_per_layer, options.nb_particles,
                              options.particle_min_weight)),
-      timer()
-{
-}
+      timer() {}
 
-void Worker::dump()
-{
+void Worker::dump() {
   int total_len = 0;
   int *displs = NULL;
   real_t *weights = NULL;
 
   gather_weights_absorbed(&total_len, &displs, &weights);
 
-  if (world_rank == 0)
-  {
+  if (world_rank == 0) {
     mkdir_out();
 
     dump_config();
@@ -45,8 +40,7 @@ void Worker::dump()
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-void Worker::write_file(char *filename)
-{
+void Worker::write_file(char *filename) {
   // write times
   size_t max_len = static_cast<size_t>(Timer::State::sprintf_max_len()) *
                        (timer_states.size() + 1) +
@@ -57,8 +51,7 @@ void Worker::write_file(char *filename)
   char *buf = (char *)malloc(max_len);
   int offset = 0;
 
-  if (world_rank == 0)
-  {
+  if (world_rank == 0) {
     offset += sprintf(buf + offset, "rank, ");
     if (timer_states.size() > 0)
       offset += Timer::State::sprintf_header(buf + offset);
@@ -67,8 +60,7 @@ void Worker::write_file(char *filename)
     offset += sprintf(buf + offset, "nb_cycles, \n");
   }
 
-  for (int i = 0; i < timer_states.size(); ++i)
-  {
+  for (int i = 0; i < (int)timer_states.size(); ++i) {
     offset += sprintf(buf + offset, "%d, ", world_rank);
     if (timer_states.size() > 0)
       offset += timer_states[i].sprintf(buf + offset);
@@ -77,8 +69,7 @@ void Worker::write_file(char *filename)
     offset += sprintf(buf + offset, "%d, \n", cycle_states[i]);
   }
 
-  if (offset >= max_len)
-  {
+  if ((size_t)offset >= max_len) {
     fprintf(stderr, "Abort in Worker::write_file");
     MPI_Abort(MPI_COMM_WORLD, 1);
   }
@@ -96,8 +87,7 @@ void Worker::write_file(char *filename)
   displs[0] = 0;
   totlen += recvcounts[0] + 1;
 
-  for (int i = 1; i < options.world_size; i++)
-  {
+  for (int i = 1; i < options.world_size; i++) {
     totlen += recvcounts[i];
     displs[i] = displs[i - 1] + recvcounts[i - 1];
   }
@@ -114,12 +104,10 @@ void Worker::write_file(char *filename)
 }
 
 void Worker::gather_weights_absorbed(int *total_len, int **displs,
-                                     real_t **weights)
-{
+                                     real_t **weights) {
   int *recvcounts = NULL;
 
-  if (world_rank == 0)
-  {
+  if (world_rank == 0) {
     recvcounts = (int *)malloc(options.world_size * sizeof(int));
   }
 
@@ -128,15 +116,13 @@ void Worker::gather_weights_absorbed(int *total_len, int **displs,
 
   *total_len = 0;
 
-  if (world_rank == 0)
-  {
+  if (world_rank == 0) {
     *displs = (int *)malloc(options.world_size * sizeof(int));
 
     (*displs)[0] = 0;
     *total_len += recvcounts[0];
 
-    for (int i = 1; i < options.world_size; i++)
-    {
+    for (int i = 1; i < options.world_size; i++) {
       *total_len += recvcounts[i];
       (*displs)[i] = (*displs)[i - 1] + recvcounts[i - 1];
     }
@@ -148,8 +134,7 @@ void Worker::gather_weights_absorbed(int *total_len, int **displs,
               recvcounts, *displs, MCMPI_REAL_T, 0, MPI_COMM_WORLD);
 }
 
-void Worker::dump_config()
-{
+void Worker::dump_config() {
   YamlDumper yaml_dumper("out/config.yaml");
   yaml_dumper.comment("Read from config");
   yaml_dumper.dump_int("nb_cells_per_layer", options.nb_cells_per_layer);
@@ -160,7 +145,8 @@ void Worker::dump_config()
   yaml_dumper.dump_int("nb_particles", options.nb_particles);
   yaml_dumper.dump_int("buffer_size", options.buffer_size);
   yaml_dumper.dump_double("cycle_time", options.cycle_time);
-  yaml_dumper.dump_int("nb_particles_per_cycle", options.nb_particles_per_cycle);
+  yaml_dumper.dump_int("nb_particles_per_cycle",
+                       options.nb_particles_per_cycle);
   yaml_dumper.dump_int("nthread", options.nthread);
   yaml_dumper.dump_double("statistics_cycle_time",
                           options.statistics_cycle_time);
@@ -172,24 +158,19 @@ void Worker::dump_config()
   yaml_dumper.dump_string("hostname", _hostname);
 }
 
-std::vector<real_t> Worker::weights_absorbed()
-{
+std::vector<real_t> Worker::weights_absorbed() {
   return layer.weights_absorbed;
 }
 
-void Worker::mkdir_out()
-{
+void Worker::mkdir_out() {
   DIR *dir = opendir("out");
-  if (dir)
-  {
+  if (dir) {
     struct dirent *next_file;
-    char filepath[256];
+    char filepath[512];
 
-    while ((next_file = readdir(dir)) != NULL)
-    {
+    while ((next_file = readdir(dir)) != NULL) {
       if (0 == strcmp(next_file->d_name, ".") ||
-          0 == strcmp(next_file->d_name, ".."))
-      {
+          0 == strcmp(next_file->d_name, "..")) {
         continue;
       }
       sprintf(filepath, "%s/%s", "out", next_file->d_name);
@@ -197,18 +178,13 @@ void Worker::mkdir_out()
     }
 
     closedir(dir);
-    if (remove("out"))
-    {
+    if (remove("out")) {
       fprintf(stderr, "Couldn't remove out dir, is it empty?\n");
       exit(1);
     }
-  }
-  else if (ENOENT == errno)
-  {
+  } else if (ENOENT == errno) {
     /* Directory does not exist. */
-  }
-  else
-  {
+  } else {
     fprintf(stderr, "opendir failed.\n");
     exit(1);
   }
@@ -217,23 +193,18 @@ void Worker::mkdir_out()
 }
 
 void Worker::dump_weights_absorbed(int total_len, int const *displs,
-                                   real_t const *weights)
-{
+                                   real_t const *weights) {
   FILE *file;
   file = fopen("out/weights.csv", "w");
-  if (!file)
-  {
+  if (!file) {
     fprintf(stderr, "Couldn't open file out/weights.csv for writing.\n");
     exit(1);
   }
 
   fprintf(file, "proc, x, weight\n");
   int proc = 0;
-  real_t x_pos = layer.dx;
-  for (int i = 0; i < total_len; ++i)
-  {
-    if (proc < options.world_size - 1 && displs[proc + 1] == i)
-    {
+  for (int i = 0; i < total_len; ++i) {
+    if (proc < options.world_size - 1 && displs[proc + 1] == i) {
       proc++;
     }
     fprintf(file, "%d, %.18e, %.18e\n", proc, layer.dx * (i + 0.5),
@@ -243,8 +214,7 @@ void Worker::dump_weights_absorbed(int total_len, int const *displs,
   fclose(file);
 }
 
-MCMPIOptions options_from_config(std::string filepath, int world_size)
-{
+MCMPIOptions options_from_config(std::string filepath, int world_size) {
   YamlLoader yaml_loader(filepath);
   // // constants
   MCMPIOptions opt;

@@ -3,10 +3,9 @@
 
 #include "worker.hpp"
 
-class WorkerSync : public Worker
-{
-  public:
-    /*!
+class WorkerSync : public Worker {
+public:
+  /*!
    * \function Worker
    *
    * \brief Constructor
@@ -14,19 +13,19 @@ class WorkerSync : public Worker
    * \param[in] world_rank mpi world_rank of the processor
    * \param[in] MCMPIOptions global options
    */
-    WorkerSync(int world_rank, const MCMPIOptions &options);
+  WorkerSync(int world_rank, const MCMPIOptions &options);
 
-    /*!
+  /*!
    * \function spin
    *
    * \brief Main function. Call spin() once in the main. The function will exit
    * once the simulation is over.
    */
-    void spin() override;
+  void spin() override;
 
-  private:
-    MPI_Datatype mpi_particle_type;
-    const int particle_tag = 0;
+private:
+  MPI_Datatype mpi_particle_type;
+  const int particle_tag = 0;
 };
 
 #endif

@@ -19,7 +19,7 @@ YamlLoader::YamlLoader(std::string filepath) {
       s = s.substr(0, s.length() - 1);
     }
     int n = s.find(":");
-    if (n == std::string::npos) {
+    if (n == (int)std::string::npos) {
       fprintf(stderr, "Yaml File %s was not correctly formatted.\n",
               filepath.c_str());
       exit(1);

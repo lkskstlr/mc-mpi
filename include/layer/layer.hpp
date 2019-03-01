@@ -11,8 +11,7 @@
  * \brief Stores one layer and the particles in it. Also does the
  * computations on the particles
  */
-class Layer
-{
+class Layer {
 public:
   /*!
    * \function Layer
@@ -42,13 +41,15 @@ public:
   /*!
    * \function simulate
    *
-   * \brief Simulates nb_particles until they leave the domain or become inactive
+   * \brief Simulates nb_particles until they leave the domain or become
+   * inactive
    *
    * \param[in] nb_particles Number of particles to simulate.
    * Use -1 to simulate until all particles have left or became inactive.
-   * \param[in] nthread Number of OpenMP threads to use, optional (default = -1).
-   * If -1 is selected the OpenMP runtime decides, e.g. through OMP_NUM_THREADS.
-   * 
+   * \param[in] nthread Number of OpenMP threads to use, optional (default =
+   * -1). If -1 is selected the OpenMP runtime decides, e.g. through
+   * OMP_NUM_THREADS.
+   *
    * \return void
    */
   void simulate(int nb_particles, int nthread = -1);
@@ -57,7 +58,7 @@ public:
    * \function dump_WA
    *
    * \brief Dump weights file to disk
-   * 
+   *
    * \return void
    */
   void dump_WA();
@@ -66,19 +67,25 @@ public:
    * \function nb_active
    *
    * \brief Returns number of particles active in this layer
-   * 
+   *
    * \return int number of particles active in this layer
    */
   int nb_active() const;
 
 private:
   void create_particles(int n);
-  int simulate_particle(Particle &particle, std::vector<real_t> &weights_absorbed_local);
-  int particle_step(Particle &particle, std::vector<real_t> &weights_absorbed_local);
+  int simulate_particle(Particle &particle,
+                        std::vector<real_t> &weights_absorbed_local);
+  int particle_step(Particle &particle,
+                    std::vector<real_t> &weights_absorbed_local);
   void simulate_helper(int nb_particles, int nthread);
 
   // -- Data --
   const real_t x_min, x_max;
+
+private:
+  const int m;
+  const int index_start;
 
 public:
   std::vector<real_t> weights_absorbed;
@@ -92,9 +99,6 @@ public:
 
 private:
   // -- physical properties --
-
-  const int m;
-  const int index_start;
   std::vector<real_t> sigs; // = exp(-0.5*(x_min+x_max))
   std::vector<real_t> absorption_rates;
   const real_t particle_min_weight;

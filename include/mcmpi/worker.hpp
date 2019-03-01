@@ -1,14 +1,13 @@
 #ifndef WORKER_HPP
 #define WORKER_HPP
 
-#include <string>
 #include "layer.hpp"
 #include "mcmpi_options.hpp"
 #include "particle.hpp"
-#include "particle_comm.hpp"
 #include "state_comm.hpp"
 #include "timer.hpp"
 #include "types.hpp"
+#include <string>
 
 /*!
  * \class Worker
@@ -17,8 +16,7 @@
  * after setup spin() is called. All the control flow and data is handeled by
  * the worker.
  */
-class Worker
-{
+class Worker {
 public:
   /*!
    * \function Worker

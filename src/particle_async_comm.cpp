@@ -1,7 +1,6 @@
-#include "particle_comm.hpp"
+#include "particle_async_comm.hpp"
 
-ParticleComm::ParticleComm(int world_rank, size_t max_buffer_size) {
-
+ParticleAsyncComm::ParticleAsyncComm(int world_rank, size_t max_buffer_size) {
   /* Particle as MPI Type */
   MPI_Datatype mpi_particle_type;
   constexpr int nitems = 5;

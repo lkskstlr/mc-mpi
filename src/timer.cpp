@@ -1,7 +1,7 @@
 #include "timer.hpp"
 #include <mpi.h>
-#include <time.h>
 #include <string>
+#include <time.h>
 
 double init_offset() {
   if (MPI_WTIME_IS_GLOBAL == 1) {
@@ -51,7 +51,7 @@ int Timer::State::sprintf_header(char *str) {
 
 int Timer::State::sprintf_max_len() { return 6 * 30; }
 
-Timer::Timer() : offset(init_offset()){};
+Timer::Timer() : offset(init_offset()) {}
 
 Timer::Timestamp Timer::start(Tag tag) {
   state.starttime = MPI_Wtime() + offset;

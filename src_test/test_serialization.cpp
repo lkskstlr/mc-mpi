@@ -1,7 +1,7 @@
-#include <mpi.h>
-#include <iostream>
 #include "particle_comm.hpp"
 #include "types.hpp"
+#include <iostream>
+#include <mpi.h>
 
 int hash(char const *data, int len) {
   unsigned int hash = 0x811c9dc5;

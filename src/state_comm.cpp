@@ -5,10 +5,9 @@ using std::vector;
 StateComm::StateComm(int world_size, int world_rank, int tag,
                      std::function<State(vector<int>)> state_lambda,
                      State init_state, int init_msg)
-    : world_size(world_size), tag(tag), state_lambda(state_lambda),
-      state(init_state), last_msg(init_msg),
-      vec_msgs(world_size * static_cast<int>(!world_rank), init_msg) {
-
+    : world_size(world_size), tag(tag), state(init_state), last_msg(init_msg),
+      vec_msgs(world_size * static_cast<int>(!world_rank), init_msg),
+      state_lambda(state_lambda) {
   init(world_rank, MPI_INT, 8192);
 }
 

@@ -16,16 +16,12 @@
 #define EVEN(n) ((n % 2) == 0)
 #define ODD(n) ((n % 2) == 1)
 
-template <typename T>
-void RmaComm<T>::init(int buffer_size)
-{
-  if (buffer_size <= 0)
-  {
+template <typename T> void RmaComm<T>::init(int buffer_size) {
+  if (buffer_size <= 0) {
     // use max buffer size
     buffer_size = (1 << 16) - 1;
   }
-  if ((buffer_size >> 16) != 0)
-  {
+  if ((buffer_size >> 16) != 0) {
     fprintf(stderr, "Buffersize too larger. Aborting.\n");
     MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
   }
@@ -34,14 +30,12 @@ void RmaComm<T>::init(int buffer_size)
   MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
 }
 
-template <typename T>
-void RmaComm<T>::init_1d(int buffer_size)
-{
+template <typename T> void RmaComm<T>::init_1d(int buffer_size) {
   this->init(buffer_size);
 
   /* Even <-> Odd */
   if (EVEN(world_rank) && (world_rank + 1 < world_size))
-    connect(world_rank);
+    connect(world_rank + 1);
   if (ODD(world_rank))
     connect(world_rank - 1);
 
@@ -52,9 +46,7 @@ void RmaComm<T>::init_1d(int buffer_size)
     connect(world_rank - 1);
 }
 
-template <typename T>
-void RmaComm<T>::advertise(int target_rank)
-{
+template <typename T> void RmaComm<T>::advertise(int target_rank) {
   /* Creating Communicator */
   MPI_Group world_group;
   MPI_Comm_group(MPI_COMM_WORLD, &world_group);
@@ -83,8 +75,7 @@ void RmaComm<T>::advertise(int target_rank)
                    &buffer.win_state);
 
   // Buffers
-  for (int i = 0; i < NBUFFER; i++)
-  {
+  for (int i = 0; i < NBUFFER; i++) {
     MPI_Win_allocate(0, sizeof(T), MPI_INFO_NULL, new_comm, &buffer.lines[i],
                      &buffer.wins[i]);
   }
@@ -92,9 +83,7 @@ void RmaComm<T>::advertise(int target_rank)
   send_buffer_infos[target_rank] = buffer;
 }
 
-template <typename T>
-void RmaComm<T>::subscribe(int source_rank)
-{
+template <typename T> void RmaComm<T>::subscribe(int source_rank) {
   MPI_Group world_group;
   MPI_Comm_group(MPI_COMM_WORLD, &world_group);
 
@@ -122,8 +111,7 @@ void RmaComm<T>::subscribe(int source_rank)
   *buffer.p_state = 0;
 
   // Buffers
-  for (int i = 0; i < NBUFFER; i++)
-  {
+  for (int i = 0; i < NBUFFER; i++) {
     MPI_Win_allocate(sizeof(T) * buffer.size, sizeof(T), MPI_INFO_NULL,
                      new_comm, &buffer.lines[i], &buffer.wins[i]);
     assert(buffer.lines[i] != NULL);
@@ -132,28 +120,25 @@ void RmaComm<T>::subscribe(int source_rank)
   recv_buffer_infos[source_rank] = buffer;
 }
 
-template <typename T>
-void RmaComm<T>::connect(int target_rank)
-{
-  if (world_rank < target_rank)
-  {
+template <typename T> void RmaComm<T>::connect(int target_rank) {
+  if (world_rank < target_rank) {
     subscribe(target_rank);
     advertise(target_rank);
-  }
-  else
-  {
+  } else {
     advertise(target_rank);
     subscribe(target_rank);
   }
 }
 
-template <typename T>
-void RmaComm<T>::send(std::vector<T> &data, int dest)
-{
+template <typename T> void RmaComm<T>::send(std::vector<T> &data, int dest) {
+  if (data.size() == 0)
+    return;
+
   /* Find Buffer Info */
   auto iter = send_buffer_infos.find(dest);
-  if (iter == send_buffer_infos.end())
-  {
+  if (iter == send_buffer_infos.end()) {
+    fprintf(stderr, "dest (%d) not found on %d, size = %zu\n", dest, world_rank,
+            data.size());
     MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
   }
   BufferInfo buffer = iter->second;
@@ -166,10 +151,8 @@ void RmaComm<T>::send(std::vector<T> &data, int dest)
   MPI_Win_unlock(0, buffer.win_state);
 
   int free_buffer = -1;
-  for (int i = 0; i < NBUFFER; i++)
-  {
-    if (GET_SIZE(&state, i) == 0)
-    {
+  for (int i = 0; i < NBUFFER; i++) {
+    if (GET_SIZE(&state, i) == 0) {
       free_buffer = i;
       break;
     }
@@ -178,7 +161,7 @@ void RmaComm<T>::send(std::vector<T> &data, int dest)
     return;
 
   /* Amount of data to send and pointer */
-  int n_send = static_cast<int>(MIN(data.size(), buffer.size));
+  int n_send = static_cast<int>(MIN((int)data.size(), buffer.size));
   size_t n_after = data.size() - n_send;
   T const *p_data = data.data() + n_after;
 
@@ -202,14 +185,11 @@ void RmaComm<T>::send(std::vector<T> &data, int dest)
          "the state is corrupted.");
 }
 
-template <typename T>
-bool RmaComm<T>::recv(std::vector<T> &data, int source)
-{
+template <typename T> bool RmaComm<T>::recv(std::vector<T> &data, int source) {
   /* Find Buffer Info */
   auto iter = recv_buffer_infos.find(source);
-  if (iter == recv_buffer_infos.end())
-  {
-    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+  if (iter == recv_buffer_infos.end()) {
+    return false;
   }
   BufferInfo buffer = iter->second;
 
@@ -223,10 +203,8 @@ bool RmaComm<T>::recv(std::vector<T> &data, int source)
   bool result = (state != 0);
 
   /* Collect data */
-  for (int i = 0; i < NBUFFER; i++)
-  {
-    if (GET_SIZE(&state, i) > 0)
-    {
+  for (int i = 0; i < NBUFFER; i++) {
+    if (GET_SIZE(&state, i) > 0) {
       int add_size = GET_SIZE(&state, i);
       MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, MPI_MODE_NOCHECK, buffer.wins[i]);
       data.insert(data.end(), buffer.lines[i], buffer.lines[i] + add_size);
@@ -243,45 +221,5 @@ bool RmaComm<T>::recv(std::vector<T> &data, int source)
                    buffer.win_state);
   MPI_Win_unlock(0, buffer.win_state);
 
-  if ((mask & state) > 0)
-  {
-    printf("Got intermediat data\n");
-  }
-
   return result;
-}
-
-template <typename T>
-void RmaComm<T>::print()
-{
-  using std::cout;
-  using std::endl;
-
-  for (auto const &buffer_info : recv_buffer_infos)
-  {
-    cout << "--- Subscribed to World Rank " << buffer_info.first << " ---\n";
-
-    state_t state;
-    state = *buffer_info.second.p_state;
-    cout << "Sizes = ";
-    for (int i = 0; i < NBUFFER; i++)
-      cout << GET_SIZE(&state, i) << " ";
-    cout << "\n";
-
-    for (int i = 0; i < NBUFFER; i++)
-    {
-      cout << "\t[" << i << "]: ";
-      int size = GET_SIZE(&state, i);
-
-      for (int j = 0; j < MIN(20, size); j++)
-      {
-        cout << buffer_info.second.lines[i][j] << " ";
-      }
-      if (size > 20)
-        cout << "...";
-
-      cout << "\n";
-    }
-    cout << endl;
-  }
 }

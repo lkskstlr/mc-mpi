@@ -1,16 +1,14 @@
 #ifndef RMA_COMM
 #define RMA_COMM
 
-// #include "async_comm.hpp"
+#include <map>
 #include <mpi.h>
 #include <stdint.h>
-#include <map>
 #include <vector>
 
-template <typename T>
-class RmaComm {
- public:
-  typedef uint64_t state_t;  // Has to match mpi_state_t
+template <typename T> class RmaComm {
+public:
+  typedef uint64_t state_t; // Has to match mpi_state_t
   typedef struct buffer_info_tag {
     MPI_Win win_state;
     state_t *p_state;
@@ -20,7 +18,7 @@ class RmaComm {
     int size;
   } BufferInfo;
 
- public:
+public:
   /*!
    * \function init
    *
@@ -105,9 +103,9 @@ class RmaComm {
    * \function recv
    *
    * \brief Recv all data from internal buffer
-   * Must have used subscribe (or connect) before. Otherwise undefined behavior.
+   * Must have used subscribe (or connect) before. Otherwise no op.
    *
-   * \param[in] data Reference of vector at wich the received data will be
+   * \param[in] data Reference of vector at which the received data will be
    * appended at the end
    * \param[in] source source of the data
    *
@@ -115,24 +113,15 @@ class RmaComm {
    */
   bool recv(std::vector<T> &data, int source);
 
-  /*!
-   * \function print
-   *
-   * \brief Print current state of buffers to std::cout
-   *
-   * \return void
-   */
-  void print();
-
- public:
+public:
   int world_size, world_rank;
   int buffer_size;
   std::map<int, MPI_Comm> comms;
   std::map<int, BufferInfo> recv_buffer_infos;
   std::map<int, BufferInfo> send_buffer_infos;
 
- public:
+public:
   MPI_Datatype mpi_data_t;
-  const MPI_Datatype mpi_state_t = MPI_UINT64_T;  // Has to match state_t
+  const MPI_Datatype mpi_state_t = MPI_UINT64_T; // Has to match state_t
 };
 #endif

@@ -1,12 +1,11 @@
+#include "layer.hpp"
+#include <chrono>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <chrono>
-#include "layer.hpp"
 
-int main(int argc, char const *argv[])
-{
+int main(int argc, char const *argv[]) {
   using std::chrono::high_resolution_clock;
 
   constexpr real_t x_min = 0.0;

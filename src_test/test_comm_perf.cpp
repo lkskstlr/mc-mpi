@@ -1,10 +1,10 @@
-#include <mpi.h>
-#include <chrono>
-#include <iostream>
-#include <thread>
 #include "layer.hpp"
 #include "particle_comm.hpp"
 #include "timer.hpp"
+#include <chrono>
+#include <iostream>
+#include <mpi.h>
+#include <thread>
 
 int main(int argc, char const *argv[]) {
   using std::chrono::high_resolution_clock;
@@ -213,9 +213,8 @@ int main(int argc, char const *argv[]) {
     // }
     // printf(")\n");
 
-    fprintf(file,
-            "proc, starttime, endtime, state_comp, state_send, "
-            "state_recv, state_idle\n");
+    fprintf(file, "proc, starttime, endtime, state_comp, state_send, "
+                  "state_recv, state_idle\n");
     int proc = 0;
     for (int i = 0; i < total_len; ++i) {
       if (proc < world_size - 1 && displs[proc + 1] == i) {

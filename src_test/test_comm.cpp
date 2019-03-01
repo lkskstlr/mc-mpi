@@ -1,8 +1,8 @@
-#include <mpi.h>
+#include "async_comm.hpp"
 #include <chrono>
 #include <iostream>
+#include <mpi.h>
 #include <thread>
-#include "async_comm.hpp"
 
 using std::chrono::high_resolution_clock;
 
