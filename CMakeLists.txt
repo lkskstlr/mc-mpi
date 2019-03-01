@@ -140,17 +140,6 @@ target_link_libraries(test_comm PRIVATE
   MPI::MPI_C
 )
 
-add_executable(test_rma_comm src_test/test_rma_comm.cpp)
-set_target_properties(test_rma_comm PROPERTIES
-  CXX_STANDARD 11
-  CXX_STANDARD_REQUIRED YES
-  CXX_EXTENSIONS NO
-)
-target_link_libraries(test_rma_comm PRIVATE
-  comm
-  MPI::MPI_C
-)
-
 
 add_executable(test_state_comm src_test/test_state_comm.cpp)
 set_target_properties(test_state_comm PROPERTIES
@@ -164,13 +153,29 @@ target_link_libraries(test_state_comm PRIVATE
 )
 
 
-add_executable(test_serialization src_test/test_serialization.cpp)
-set_target_properties(test_serialization PROPERTIES
+add_executable(test_async_serialization
+  src_test/test_async_serialization.cpp
+)
+set_target_properties(test_async_serialization PROPERTIES
   CXX_STANDARD 11
   CXX_STANDARD_REQUIRED YES
   CXX_EXTENSIONS NO
 )
-target_link_libraries(test_serialization PRIVATE
+target_link_libraries(test_async_serialization PRIVATE
+  comm
+  MPI::MPI_C
+)
+
+
+add_executable(test_rma_serialization
+  src_test/test_rma_serialization.cpp
+)
+set_target_properties(test_rma_serialization PROPERTIES
+  CXX_STANDARD 11
+  CXX_STANDARD_REQUIRED YES
+  CXX_EXTENSIONS NO
+)
+target_link_libraries(test_rma_serialization PRIVATE
   comm
   MPI::MPI_C
 )
@@ -194,61 +199,5 @@ set_target_properties(test_layer_perf PROPERTIES
   CXX_EXTENSIONS NO
 )
 target_link_libraries(test_layer_perf
-  layer
-)
-
-add_executable(test_layer_omp_perf src_test/test_layer_omp_perf.cpp)
-set_target_properties(test_layer_omp_perf PROPERTIES
-  CXX_STANDARD 11
-  CXX_STANDARD_REQUIRED YES
-  CXX_EXTENSIONS NO
-)
-target_link_libraries(test_layer_omp_perf
-  layer
-)
-
-add_executable(test_comm_perf src_test/test_comm_perf.cpp)
-set_target_properties(test_comm_perf PROPERTIES
-  CXX_STANDARD 11
-  CXX_STANDARD_REQUIRED YES
-  CXX_EXTENSIONS NO
-)
-target_link_libraries(test_comm_perf
-  comm
-  timer
-  layer
-)
-
-add_executable(test_mpi_sync src_test/test_mpi_sync.cpp)
-set_target_properties(test_mpi_sync PROPERTIES
-  CXX_STANDARD 11
-  CXX_STANDARD_REQUIRED YES
-  CXX_EXTENSIONS NO
-)
-target_link_libraries(test_mpi_sync
-  timer
-  layer
-)
-
-
-add_executable(test_mpi_sync_event src_test/test_mpi_sync_event.cpp)
-set_target_properties(test_mpi_sync_event PROPERTIES
-  CXX_STANDARD 11
-  CXX_STANDARD_REQUIRED YES
-  CXX_EXTENSIONS NO
-)
-target_link_libraries(test_mpi_sync_event
-  timer
-  layer
-)
-
-add_executable(test_recv_perf src_test/test_recv_perf.cpp)
-set_target_properties(test_recv_perf PROPERTIES
-  CXX_STANDARD 11
-  CXX_STANDARD_REQUIRED YES
-  CXX_EXTENSIONS NO
-)
-target_link_libraries(test_recv_perf
-  comm
   layer
 )

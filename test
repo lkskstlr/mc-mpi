@@ -1,9 +1,6 @@
 #!/bin/bash
 
-declare -a tests=("test_comm" "test_state_comm" "test_serialization" "test_layer") # space separated list ("test_1" "test_2")
 build=build_test_S9peX6noUt0qQaFBcTWp # a safeguard to delete nothing that is important
-
-
 
 # set directory
 cd "$(dirname "$0")"
@@ -12,28 +9,29 @@ cd "$(dirname "$0")"
 rm -rf "$build"
 mkdir "$build"
 cd "$build"
-echo "cmake -DCMAKE_BUILD_TYPE=Release .."
-cmake -DCMAKE_BUILD_TYPE=Release .. > /dev/null
-for t in "${tests[@]}"
-do
-   echo "make -j4 $t"
-   make -j4 "$t" > /dev/null 
-done
+echo "cmake .."
+cmake .. > /dev/null
+echo "make -j"
+make -j > /dev/null
+
 
 # Run
 echo "Running tests. Should print CORRECT after at most x seconds:"
 
 
-echo -n "    Test Communication    ( 1 sec): "
+echo -n "    Test Communication          ( 1 sec): "
 mpirun -n 10 ./test_comm;
 
-echo -n "    Test State Comm.      ( 1 sec): "
+echo -n "    Test State Comm             ( 1 sec): "
 mpirun -n 10 ./test_state_comm;
 
-echo -n "    Test Serialization    ( 1 sec): "
-mpirun -n 2 ./test_serialization;
+echo -n "    Test Async Serialization    ( 1 sec): "
+mpirun -n 2 ./test_async_serialization;
 
-echo -n "    Test Layer Simulation ( 1 sec): "
+echo -n "    Test Rma Serialization      ( 1 sec): "
+mpirun -n 2 ./test_rma_serialization;
+
+echo -n "    Test Layer Simulation       ( 1 sec): "
 ./test_layer;
 
 

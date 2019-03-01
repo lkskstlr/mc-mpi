@@ -8,6 +8,8 @@
 int main(int argc, char const *argv[]) {
   using std::chrono::high_resolution_clock;
 
+  int nthread = argc == 1 ? -1 : atoi(argv[1]);
+
   constexpr real_t x_min = 0.0;
   constexpr real_t x_max = 1.0;
   const real_t x_ini = sqrtf(2.0) / 2.0;
@@ -22,7 +24,7 @@ int main(int argc, char const *argv[]) {
                                particle_min_weight));
 
   auto start = high_resolution_clock::now();
-  layer.simulate(-1);
+  layer.simulate(-1, nthread);
   auto finish = high_resolution_clock::now();
 
   layer.dump_WA();
