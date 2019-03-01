@@ -209,14 +209,14 @@ target_link_libraries(test_layer_perf
 enable_testing()
 add_test(NAME TestLayer COMMAND test_layer)
 
-add_test(NAME TestComm COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2 ${MPIEXEC_PREFLAGS} test_comm ${MPIEXEC_POSTFLAGS})
+add_test(NAME TestComm COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2 ${MPIEXEC_PREFLAGS} ./test_comm ${MPIEXEC_POSTFLAGS})
 set_tests_properties(TestComm PROPERTIES TIMEOUT 2)
 
-add_test(NAME TestStateComm COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2 ${MPIEXEC_PREFLAGS} test_state_comm ${MPIEXEC_POSTFLAGS})
+add_test(NAME TestStateComm COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2 ${MPIEXEC_PREFLAGS} ./test_state_comm ${MPIEXEC_POSTFLAGS})
 set_tests_properties(TestStateComm PROPERTIES TIMEOUT 2)
 
-add_test(NAME TestAsyncSerialization COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2 ${MPIEXEC_PREFLAGS} test_async_serialization ${MPIEXEC_POSTFLAGS})
+add_test(NAME TestAsyncSerialization COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2 ${MPIEXEC_PREFLAGS} ./test_async_serialization ${MPIEXEC_POSTFLAGS})
 set_tests_properties(TestAsyncSerialization PROPERTIES TIMEOUT 2)
 
-add_test(NAME TestRmaSerialization COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2 ${MPIEXEC_PREFLAGS} test_rma_serialization ${MPIEXEC_POSTFLAGS})
+add_test(NAME TestRmaSerialization COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2 ${MPIEXEC_PREFLAGS} ./test_rma_serialization ${MPIEXEC_POSTFLAGS})
 set_tests_properties(TestRmaSerialization PROPERTIES TIMEOUT 2)

@@ -1,4 +1,5 @@
 #include "particle_rma_comm.hpp"
+#include <stddef.h>
 
 ParticleRmaComm::ParticleRmaComm(int world_rank, int buffer_size) {
   /* Particle as MPI Type */

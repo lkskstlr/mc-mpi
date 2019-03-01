@@ -1,4 +1,4 @@
-# mc-mpi
+# mc-mpi [![Build Status](https://travis-ci.org/lkskstlr/mc-mpi.svg?branch=master)](https://travis-ci.org/lkskstlr/mc-mpi)
 
 ## Build & Test
 Standard CMake project. This assumes you use a Unix system.

@@ -1,5 +1,6 @@
 #include "timer.hpp"
 #include <mpi.h>
+#include <stddef.h>
 #include <string>
 #include <time.h>
 

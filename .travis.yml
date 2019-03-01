@@ -1,0 +1,17 @@
+language: cpp
+dist: xenial
+compiler: gcc
+
+before_install:
+  - sudo apt update
+  - sudo apt install -y mpich libmpich-dev
+  - mpiexec --version
+  - export OMP_NUM_THREADS=4
+  - test -n $CC  && unset CC
+  - test -n $CXX && unset CXX
+
+script:
+  - mkdir build && cd build
+  - cmake ..
+  - make -j
+  - make test

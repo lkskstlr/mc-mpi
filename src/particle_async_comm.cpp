@@ -1,4 +1,5 @@
 #include "particle_async_comm.hpp"
+#include <stddef.h>
 
 ParticleAsyncComm::ParticleAsyncComm(int world_rank, size_t max_buffer_size) {
   /* Particle as MPI Type */

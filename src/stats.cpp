@@ -1,6 +1,7 @@
 #include "stats.hpp"
 #include <algorithm>
 #include <mpi.h>
+#include <stddef.h>
 #include <string>
 
 MPI_Datatype Stats::State::mpi_t() {
