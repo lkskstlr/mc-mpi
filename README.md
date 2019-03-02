@@ -7,6 +7,7 @@ git clone https://github.com/lkskstlr/mc-mpi.git
 cd mc-mpi && mkdir build && cd build && cmake .. && make -j
 make test
 ```
+To build with CUDA support use `cmake .. -DCUDA_ENABLED=ON` and make sure to either have `g++-4.8` in your `PATH` or set `CUDAHOSTCXX` to a [supported compiler](https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/index.html#supported-host-compilers).
 
 ## Run
 After building use

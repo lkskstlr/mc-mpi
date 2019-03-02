@@ -1,8 +1,8 @@
 #include "curandom.hpp"
 
-static const seed_t RNG_G = (seed_t)(6364136223846793005ull);
-static const seed_t RNG_C = (seed_t)(1442695040888963407ull);
-static const seed_t RNG_P = (seed_t)(1) << 63;
+__constant__ seed_t RNG_G = (seed_t)(6364136223846793005ull);
+__constant__ seed_t RNG_C = (seed_t)(1442695040888963407ull);
+__constant__ seed_t RNG_P = (seed_t)(1) << 63;
 
 __global__ void rnd_real_kernel(int n, seed_t *seeds, float *reals) {
   float inv_RNG_P = (float)(1.0) / (float)((seed_t)(1) << 63);

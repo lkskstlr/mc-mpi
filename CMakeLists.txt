@@ -143,6 +143,10 @@ target_link_libraries(mcmpi
 )
 
 if(CUDA_ENABLED)
+  add_library(gpu_errcheck INTERFACE)
+  target_include_directories(gpu_errcheck INTERFACE include/gpu_errcheck)
+  #set_target_properties(gpu_errcheck PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+
   add_library(curandom STATIC src/curandom.cu)
   target_include_directories(curandom PUBLIC include/curandom)
   target_compile_features(curandom PRIVATE cxx_std_11)
@@ -243,6 +247,11 @@ target_link_libraries(test_layer_perf
 )
 
 if(CUDA_ENABLED)
+  add_executable(test_gpu_errcheck src/test_gpu_errcheck.cu)
+  target_link_libraries(test_gpu_errcheck
+    PRIVATE gpu_errcheck
+  )
+
   add_executable(test_curandom src/test_curandom.cu)
   target_compile_features(test_curandom PRIVATE cxx_std_11)
   set_target_properties(test_curandom PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
@@ -269,6 +278,9 @@ add_test(NAME TestRmaSerialization COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPR
 set_tests_properties(TestRmaSerialization PROPERTIES TIMEOUT 2)
 
 if(CUDA_ENABLED)
+  add_test(NAME TestGpuErrcheck COMMAND ./test_gpu_errcheck)
+  set_tests_properties(TestGpuErrcheck PROPERTIES WILL_FAIL ON)
+
   add_test(NAME TestCudaRandom COMMAND ./test_curandom)
   set_tests_properties(TestRmaSerialization PROPERTIES TIMEOUT 20)
 endif(CUDA_ENABLED)
