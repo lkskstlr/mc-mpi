@@ -2,6 +2,7 @@
 #define MCMPI_OPTIONS_HPP
 
 #include "types.hpp"
+#include <stddef.h>
 
 /*!
  * \struct MCMPIOptions

@@ -1,8 +1,8 @@
 /**
  * INF560 - MC
  */
-#ifndef __RANDOM_H
-#define __RANDOM_H
+#ifndef RANDOM_HPP
+#define RANDOM_HPP
 
 #include "types.hpp"
 

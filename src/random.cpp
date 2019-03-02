@@ -1,7 +1,7 @@
 /**
  * INF560 - MC
  */
-#include "random.h"
+#include "random.hpp"
 
 /* REAL RNG */
 

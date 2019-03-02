@@ -1,5 +1,5 @@
 #include "layer.hpp"
-#include "random.h"
+#include "random.hpp"
 #include <assert.h>
 #include <math.h>
 #include <omp.h>

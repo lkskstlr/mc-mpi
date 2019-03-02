@@ -1,5 +1,27 @@
-cmake_minimum_required(VERSION 3.2 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
 project(mc-mpi C CXX)
+
+option(CUDA_ENABLED "Build and test with CUDA support." OFF)
+
+
+if(CUDA_ENABLED)
+  # https://devblogs.nvidia.com/building-cuda-applications-cmake/
+  message(STATUS "CUDA enabled")
+  # Finding suitable compiler for nvcc -ccbin
+  if(NOT DEFINED ENV{CUDAHOSTCXX})
+    find_program(CUDAGCC g++-4.8)
+    if(NOT CUDAGCC)
+      message(WARNING "Environment variable CUDAHOSTCXX was not set and g++-4.8 was not found. Probably nvcc will not work with standard g++.")
+    else()
+      message(STATUS "Environment variable CUDAHOSTCXX was not set. Using ${CUDAGCC} (default)")
+      set(ENV{CUDAHOSTCXX} "${CUDAGCC}")
+    endif()
+  endif()
+  enable_language(CUDA)
+else()
+  message(STATUS "CUDA disabled. Set CUDA_ENABLED option.")
+endif()
+
 
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "Release" CACHE STRING
@@ -60,12 +82,17 @@ target_link_libraries(timer
 add_library(types INTERFACE)
 target_include_directories(types INTERFACE include/types)
 target_compile_features(types INTERFACE cxx_std_11)
-target_link_libraries(types INTERFACE MPI::MPI_C)
 
 
-add_library(layer SHARED src/layer.cpp src/random.cpp)
+add_library(random SHARED src/random.cpp)
+target_include_directories(random PUBLIC include/random)
+target_link_libraries(random
+  PUBLIC types
+)
+
+
+add_library(layer SHARED src/layer.cpp)
 target_include_directories(layer PUBLIC include/layer)
-target_include_directories(layer PRIVATE include/layer/private)
 set_target_properties(layer PROPERTIES
   CXX_STANDARD 11
   CXX_STANDARD_REQUIRED YES
@@ -73,7 +100,7 @@ set_target_properties(layer PROPERTIES
 )
 target_link_libraries(layer
   PUBLIC types
-  PRIVATE OpenMP::OpenMP_CXX
+  PRIVATE random OpenMP::OpenMP_CXX
 )
 
 
@@ -114,6 +141,16 @@ target_link_libraries(mcmpi
   PUBLIC types layer timer comm MPI::MPI_C
   PRIVATE yaml
 )
+
+if(CUDA_ENABLED)
+  add_library(curandom STATIC src/curandom.cu)
+  target_include_directories(curandom PUBLIC include/curandom)
+  target_compile_features(curandom PRIVATE cxx_std_11)
+  set_target_properties(curandom PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+  target_link_libraries(curandom
+    PUBLIC types
+  )
+endif(CUDA_ENABLED)
 
 ########## Scripts ##########
 configure_file(scripts/save_run save_run COPYONLY)
@@ -205,8 +242,18 @@ target_link_libraries(test_layer_perf
   layer
 )
 
+if(CUDA_ENABLED)
+  add_executable(test_curandom src/test_curandom.cu)
+  target_compile_features(test_curandom PRIVATE cxx_std_11)
+  set_target_properties(test_curandom PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+  target_link_libraries(test_curandom
+    PRIVATE curandom random types
+  )
+endif(CUDA_ENABLED)
+
 ########## CTest ##########
 enable_testing()
+
 add_test(NAME TestLayer COMMAND test_layer)
 
 add_test(NAME TestComm COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2 ${MPIEXEC_PREFLAGS} ./test_comm ${MPIEXEC_POSTFLAGS})
@@ -220,3 +267,8 @@ set_tests_properties(TestAsyncSerialization PROPERTIES TIMEOUT 2)
 
 add_test(NAME TestRmaSerialization COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2 ${MPIEXEC_PREFLAGS} ./test_rma_serialization ${MPIEXEC_POSTFLAGS})
 set_tests_properties(TestRmaSerialization PROPERTIES TIMEOUT 2)
+
+if(CUDA_ENABLED)
+  add_test(NAME TestCudaRandom COMMAND ./test_curandom)
+  set_tests_properties(TestRmaSerialization PROPERTIES TIMEOUT 20)
+endif(CUDA_ENABLED)

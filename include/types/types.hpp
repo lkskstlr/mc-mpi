@@ -2,7 +2,6 @@
 #define TYPES_HPP
 
 #include <limits>
-#include <mpi.h>
 
 typedef unsigned long long seed_t;
 
