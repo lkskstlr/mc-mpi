@@ -72,7 +72,7 @@ public:
    */
   int nb_active() const;
 
-private:
+public:
   void create_particles(int n);
   int simulate_particle(Particle &particle,
                         std::vector<real_t> &weights_absorbed_local);
@@ -97,7 +97,7 @@ public:
 
   const bool left_border, right_border;
 
-private:
+public:
   // -- physical properties --
   std::vector<real_t> sigs; // = exp(-0.5*(x_min+x_max))
   std::vector<real_t> absorption_rates;

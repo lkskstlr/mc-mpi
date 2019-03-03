@@ -145,13 +145,22 @@ target_link_libraries(mcmpi
 if(CUDA_ENABLED)
   add_library(gpu_errcheck INTERFACE)
   target_include_directories(gpu_errcheck INTERFACE include/gpu_errcheck)
-  #set_target_properties(gpu_errcheck PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+
 
   add_library(curandom STATIC src/curandom.cu)
   target_include_directories(curandom PUBLIC include/curandom)
   target_compile_features(curandom PRIVATE cxx_std_11)
   set_target_properties(curandom PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
   target_link_libraries(curandom
+    PUBLIC types
+  )
+
+
+  add_library(culayer STATIC src/culayer.cu)
+  target_include_directories(culayer PUBLIC include/culayer)
+  target_compile_features(culayer PRIVATE cxx_std_11)
+  set_target_properties(culayer PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+  target_link_libraries(culayer
     PUBLIC types
   )
 endif(CUDA_ENABLED)
@@ -257,6 +266,13 @@ if(CUDA_ENABLED)
   set_target_properties(test_curandom PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
   target_link_libraries(test_curandom
     PRIVATE curandom random types
+  )
+
+  add_executable(test_culayer src/test_culayer.cu)
+  target_compile_features(test_culayer PRIVATE cxx_std_11)
+  set_target_properties(test_culayer PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+  target_link_libraries(test_culayer
+    PRIVATE culayer types layer gpu_errcheck
   )
 endif(CUDA_ENABLED)
 
