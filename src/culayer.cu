@@ -53,7 +53,7 @@ void simulate(int n,
     int n_active = n;
     int n_inactive = 0;
 
-    int steps = 10;
+    int steps = 325;
 
     Particle* particles_inactive = (Particle*) malloc(sizeof(Particle) * n);
     Particle* buffer = (Particle*) malloc(sizeof(Particle) * n);
@@ -70,10 +70,10 @@ void simulate(int n,
     gpu_errcheck( cudaMemcpy(d_absorption_rates, absorption_rates, sizeof(float) * n_cells, cudaMemcpyHostToDevice) );
     gpu_errcheck( cudaMemcpy(d_weights_absorbed, weights_absorbed, sizeof(float) * n_cells, cudaMemcpyHostToDevice) );
 
-    while(n_active > n/7){
+    while(n_active > 0){
       gpu_errcheck( cudaMemcpy(d_particles, particles, sizeof(Particle) * n_active, cudaMemcpyHostToDevice) );
 
-      // printf("%d\n", n_active);
+      printf("%d\n", n_active);
       particle_step_kernel<<<DIV_UP(n_active, 256), 256, sizeof(float) * 3 * n_cells >>>(
         n_active, d_particles, steps, d_sigs, d_absorption_rates, d_weights_absorbed, min_index, max_index, dx );
       gpu_errcheck( cudaPeekAtLastError() );
