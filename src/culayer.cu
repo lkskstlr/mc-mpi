@@ -1,110 +1,94 @@
-#include "culayer.hpp"
+#include <cuda_runtime.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "particle.hpp"
+#include "culayer_kernel.hpp"
+#include "culayer.hpp"
+#include "gpu_errcheck.hpp"
+#include <sys/time.h>
+#include <math.h>
 
-// https://developer.download.nvidia.com/assets/cuda/files/reduction.pdf
+// https://devblogs.nvidia.com/using-shared-memory-cuda-cc/
 
-#define NCELLS 1000
-#define DX ((float)1 / (float)1000)
 #define DIV_UP(x,y) (1 + ((x - 1) / y))
+#define FLOAT_CMP_PREC (1e-4)
 
+void particle_sort(
+  int n_in, 
+  Particle* particles_in, 
+  int* n_active, 
+  Particle* particles_active,
+  int* n_inactive,
+  Particle* particles_inactive,
+  int min_index,
+  int max_index){
 
-__constant__ seed_t RNG_G = (seed_t)(6364136223846793005ull);
-__constant__ seed_t RNG_C = (seed_t)(1442695040888963407ull);
-__constant__ seed_t RNG_P = (seed_t)(1) << 63;
-
-__device__ __forceinline__ float cu_rnd_real(seed_t* seed) {
-  float inv_RNG_P = (float)(1) / (float)(RNG_P);
-  *seed = (RNG_G * *seed + RNG_C) % RNG_P;
-  return (float)(*seed) * inv_RNG_P;
-}
-
-
-__global__ void particle_step_kernel(int n,
-  Particle* particles,
-  int steps,
-  float const* const sigs_in,
-  float const* const absorption_rates_in,
-  float * const weights_absorbed_out)
-{
-  extern __shared__ float sdata[];
-
-  float * const sigs = sdata;
-  float * const absorption_rates = sdata + NCELLS;
-  float * const weights_absorbed = sdata + 2*NCELLS;
-
-  for (int j = 0; j < DIV_UP(NCELLS, blockDim.x); j++){
-    int cpy_ind = j*blockDim.x + threadIdx.x;
-    if (cpy_ind < NCELLS){
-      sigs[cpy_ind] = sigs_in[cpy_ind];
-      absorption_rates[cpy_ind] = absorption_rates_in[cpy_ind];
-      weights_absorbed[cpy_ind] = 0;
+  for(int i = 0; i < n_in; i++)
+  {
+    if(particles_in[i].index < min_index || particles_in[i].index >= max_index)
+    {
+      particles_inactive[*n_inactive] = particles_in[i];
+      (*n_inactive)++;
+    }
+    else
+    {
+      particles_active[*n_active] = particles_in[i];
+      (*n_active)++;
     }
   }
-  __syncthreads();
+}
 
-  int i = blockIdx.x * blockDim.x + threadIdx.x;
+void simulate(int n,
+  Particle* particles,
+  float const* const sigs,
+  float const* const absorption_rates,
+  float * const weights_absorbed,
+  int min_index,
+  int max_index,
+  float dx)
+  {
+    int n_cells = max_index - min_index;
+    
+    int n_active = n;
+    int n_inactive = 0;
 
-  if (i < n){
-    Particle particle = particles[i];
+    int steps = 10;
 
-    for (int step = 0; step < steps; step++){
-      if (particle.index >= 0 && particle.index < NCELLS)
+    Particle* particles_inactive = (Particle*) malloc(sizeof(Particle) * n);
+    Particle* buffer = (Particle*) malloc(sizeof(Particle) * n);
+
+    Particle* d_particles;
+    gpu_errcheck( cudaMalloc((void**)&d_particles, sizeof(Particle) * n) );
+
+    float *d_sigs, *d_absorption_rates, *d_weights_absorbed;
+    gpu_errcheck( cudaMalloc((void**)&d_sigs, sizeof(float) * n_cells) );
+    gpu_errcheck( cudaMalloc((void**)&d_absorption_rates, sizeof(float) * n_cells) );
+    gpu_errcheck( cudaMalloc((void**)&d_weights_absorbed, sizeof(float) * n_cells) );
+
+    gpu_errcheck( cudaMemcpy(d_sigs, sigs, sizeof(float) * n_cells, cudaMemcpyHostToDevice) );
+    gpu_errcheck( cudaMemcpy(d_absorption_rates, absorption_rates, sizeof(float) * n_cells, cudaMemcpyHostToDevice) );
+    gpu_errcheck( cudaMemcpy(d_weights_absorbed, weights_absorbed, sizeof(float) * n_cells, cudaMemcpyHostToDevice) );
+
+    while(n_active > n/7){
+      gpu_errcheck( cudaMemcpy(d_particles, particles, sizeof(Particle) * n_active, cudaMemcpyHostToDevice) );
+
+      // printf("%d\n", n_active);
+      particle_step_kernel<<<DIV_UP(n_active, 256), 256, sizeof(float) * 3 * n_cells >>>(
+        n_active, d_particles, steps, d_sigs, d_absorption_rates, d_weights_absorbed, min_index, max_index, dx );
+      gpu_errcheck( cudaPeekAtLastError() );
+
+      gpu_errcheck( cudaMemcpy(particles, d_particles, sizeof(Particle) * n_active, cudaMemcpyDeviceToHost) );
       {
-        const float interaction_rate = 1.0 - absorption_rates[particle.index];
-        const float sig_a = sigs[particle.index] * absorption_rates[particle.index];
-        const float sig_i = sigs[particle.index] * interaction_rate;
-
-        // calculate theoretic movement
-        const float h = cu_rnd_real(&particle.seed);
-        float di = MAXREAL;
-        if (sig_i > EPS_PRECISION){
-          // This should always be true
-          di = -log(h) / sig_i;
-        }
-
-        // -- possible new cell --
-        float mu_sign = copysignf(1.0, particle.mu);
-        int index_new = __float2int_rn(mu_sign) + particle.index;
-        float x_new_edge = particle.index * DX;
-        if (mu_sign == 1){
-          x_new_edge += DX;
-        }
-
-        float di_edge = MAXREAL;
-        if (particle.mu < -EPS_PRECISION || EPS_PRECISION < particle.mu){
-          di_edge = (x_new_edge - particle.x) / particle.mu;
-        }
-
-        if (di < di_edge) {
-          /* move inside cell an draw new mu */
-          index_new = particle.index;
-          particle.x += di * particle.mu;
-          particle.mu = 2 * cu_rnd_real(&particle.seed) - 1;
-        } else {
-          /* set position to border */
-          di = di_edge;
-          particle.x = x_new_edge;
-        }
-
-        // -- Calculate amount of absorbed energy --
-        const float dw = (1 - expf(-sig_a * di)) * particle.wmc;
-
-        /* Weight removed from particle is added to the layer */
-        particle.wmc -= dw;
-        atomicAdd(weights_absorbed + particle.index, dw);
-        particle.index = index_new;
-
-        
+        int n_active_new = 0;
+        particle_sort(n_active, particles, &n_active_new, buffer, &n_inactive, particles_inactive, min_index, max_index);
+        n_active = n_active_new;
+        Particle* tmp_ptr = particles;
+        particles = buffer;
+        buffer = tmp_ptr;
       }
     }
-    particles[i] = particle;
-  }
 
-  __syncthreads();
-  for (int j = 0; j < DIV_UP(NCELLS, blockDim.x); j++){
-    int cpy_ind = j*blockDim.x + threadIdx.x;
-    if (cpy_ind < NCELLS){
-      atomicAdd(weights_absorbed_out + cpy_ind, weights_absorbed[cpy_ind]);
-    }
+    // printf("\n");
+    gpu_errcheck( cudaMemcpy(weights_absorbed, d_weights_absorbed, sizeof(float) * n_cells, cudaMemcpyDeviceToHost) );    
   }
-}

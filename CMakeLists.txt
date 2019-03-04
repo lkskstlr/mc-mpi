@@ -156,12 +156,12 @@ if(CUDA_ENABLED)
   )
 
 
-  add_library(culayer STATIC src/culayer.cu)
+  add_library(culayer STATIC src/culayer.cu src/culayer_kernel.cu)
   target_include_directories(culayer PUBLIC include/culayer)
   target_compile_features(culayer PRIVATE cxx_std_11)
   set_target_properties(culayer PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
   target_link_libraries(culayer
-    PUBLIC types
+    PUBLIC types gpu_errcheck
   )
 endif(CUDA_ENABLED)
 
