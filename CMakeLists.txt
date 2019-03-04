@@ -32,8 +32,8 @@ RelWithDebInfo MinSizeRel."
 endif(NOT CMAKE_BUILD_TYPE)
 
 ########## Global Compile Flags ##########
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror -pedantic")
-set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -Wall -Werror -pedantic")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror")
+#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Werror -pedantic")
 
 
 ########## Required Packages ##########
@@ -130,7 +130,7 @@ add_library(mcmpi SHARED
   src/worker_async.cpp
   src/worker_rma.cpp
 )
-target_compile_features(mcmpi PUBLIC cxx_lambda_init_captures)
+# target_compile_features(mcmpi PUBLIC cxx_lambda_init_captures)
 target_include_directories(mcmpi PUBLIC include/mcmpi)
 set_target_properties(mcmpi PROPERTIES
   CXX_STANDARD 11
