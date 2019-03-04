@@ -168,6 +168,7 @@ endif(CUDA_ENABLED)
 ########## Scripts ##########
 configure_file(scripts/save_run save_run COPYONLY)
 configure_file(scripts/run.batch run.batch COPYONLY)
+configure_file(scripts/run.py run.py COPYONLY)
 
 
 

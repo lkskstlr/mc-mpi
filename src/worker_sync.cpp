@@ -2,7 +2,8 @@
 #include <stddef.h>
 
 WorkerSync::WorkerSync(int world_rank, const MCMPIOptions &options)
-    : Worker(world_rank, options) {
+    : Worker(world_rank, options)
+{
   constexpr int nitems = 5;
   int blocklengths[nitems] = {1, 1, 1, 1, 1};
   MPI_Datatype types[nitems] = {MPI_UNSIGNED_LONG_LONG, MPI_FLOAT, MPI_FLOAT,
@@ -20,7 +21,8 @@ WorkerSync::WorkerSync(int world_rank, const MCMPIOptions &options)
   MPI_Type_commit(&mpi_particle_type);
 }
 
-void WorkerSync::spin() {
+void WorkerSync::spin()
+{
   auto timestamp = timer.start(Timer::Tag::Idle);
   int nb_cycles_stats = 0;
 
@@ -28,10 +30,13 @@ void WorkerSync::spin() {
 
   int world_size = options.world_size;
 
-  while (true) {
+  while (true)
+  {
     /* Simulate Particles */
     timer.change(timestamp, Timer::Tag::Computation);
-    { layer.simulate(options.nb_particles_per_cycle, options.nthread); }
+    {
+      layer.simulate(options.nb_particles_per_cycle, options.nthread);
+    }
 
     /* SendRecv Particles */
     timer.change(timestamp, Timer::Tag::Send);
@@ -45,7 +50,8 @@ void WorkerSync::spin() {
       /************************** [ODDS] <==> [EVENS]
        * ****************************/
       recv_count = 0;
-      if ((world_rank % 2) && (world_rank + 1 < world_size)) {
+      if ((world_rank % 2) && (world_rank + 1 < world_size))
+      {
         // ODD
         MPI_Sendrecv(layer.particles_right.data(), layer.particles_right.size(),
                      mpi_particle_type, world_rank + 1, particle_tag,
@@ -56,7 +62,8 @@ void WorkerSync::spin() {
         layer.particles_right.clear();
         MPI_Get_count(&status, mpi_particle_type, &recv_count);
       }
-      if (!(world_rank % 2) && (world_rank > 0)) {
+      if (!(world_rank % 2) && (world_rank > 0))
+      {
         // EVEN
         MPI_Sendrecv(layer.particles_left.data(), layer.particles_left.size(),
                      mpi_particle_type, world_rank - 1, particle_tag,
@@ -75,7 +82,8 @@ void WorkerSync::spin() {
       /************************** [EVENS] <==> [ODDS]
        * ****************************/
       recv_count = 0;
-      if (!(world_rank % 2) && (world_rank + 1 < world_size)) {
+      if (!(world_rank % 2) && (world_rank + 1 < world_size))
+      {
         // EVEN
         MPI_Sendrecv(layer.particles_right.data(), layer.particles_right.size(),
                      mpi_particle_type, world_rank + 1, particle_tag,
@@ -85,7 +93,8 @@ void WorkerSync::spin() {
         layer.particles_right.clear();
         MPI_Get_count(&status, mpi_particle_type, &recv_count);
       }
-      if (world_rank % 2) {
+      if (world_rank % 2)
+      {
         // ODD
         MPI_Sendrecv(layer.particles_left.data(), layer.particles_left.size(),
                      mpi_particle_type, world_rank - 1, particle_tag,
@@ -111,7 +120,8 @@ void WorkerSync::spin() {
     }
 
     /* Timer State */
-    if (timer.time() > timer.starttime() + options.statistics_cycle_time) {
+    if (timer.time() > timer.starttime() + options.statistics_cycle_time)
+    {
       timer_states.push_back(timer.restart(timestamp, Timer::Tag::Computation));
       cycle_states.push_back(nb_cycles_stats);
       nb_cycles_stats = 0;

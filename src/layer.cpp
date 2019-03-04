@@ -13,14 +13,16 @@
 
 Layer decompose_domain(real_t x_min, real_t x_max, real_t x_ini, int world_size,
                        int world_rank, int cells_per_layer, int nb_particles,
-                       real_t particle_min_weight) {
+                       real_t particle_min_weight)
+{
   assert(x_max > x_min);
   real_t dx = (x_max - x_min) / world_size;
   int nc_ini = (int)((x_ini - x_min) / dx);
   Layer layer(x_min + world_rank * dx, x_min + (1 + world_rank) * dx,
               world_rank * cells_per_layer, cells_per_layer,
               particle_min_weight);
-  if (world_rank == nc_ini) {
+  if (world_rank == nc_ini)
+  {
     seed_t seed = 5127801;
     layer.create_particles(x_ini, 1.0 / nb_particles, nb_particles, seed);
   }
@@ -33,13 +35,15 @@ Layer::Layer(real_t x_min, real_t x_max, int index_start, int m,
     : x_min(x_min), x_max(x_max), m(m), index_start(index_start),
       dx((x_max - x_min) / m), left_border(fabs(x_min) < EPS_PRECISION),
       right_border(fabs(x_max - 1.0) < EPS_PRECISION),
-      particle_min_weight(particle_min_weight) {
+      particle_min_weight(particle_min_weight)
+{
   constexpr int vector_reserve = 10000;
 
   // sigs
   sigs.reserve(m);
   real_t x_mid;
-  for (int i = 0; i < m; ++i) {
+  for (int i = 0; i < m; ++i)
+  {
     x_mid = x_min + (i * dx) + 0.5 * dx;
     sigs.push_back(exp(-x_mid));
   }
@@ -53,8 +57,10 @@ Layer::Layer(real_t x_min, real_t x_max, int index_start, int m,
   particles.reserve(vector_reserve);
 }
 
-void Layer::create_particles(real_t x_ini, real_t wmc, int n, seed_t seed) {
-  if (x_ini > x_min && x_ini < x_max) {
+void Layer::create_particles(real_t x_ini, real_t wmc, int n, seed_t seed)
+{
+  if (x_ini > x_min && x_ini < x_max)
+  {
     this->x_ini = x_ini;
     this->wmc = wmc;
     this->nb_particles_create = n;
@@ -64,18 +70,20 @@ void Layer::create_particles(real_t x_ini, real_t wmc, int n, seed_t seed) {
   }
 }
 
-int Layer::nb_active() const {
+int Layer::nb_active() const
+{
   return (int)particles.size() + nb_particles_create;
 }
 
-void Layer::create_particles(int n) {
+void Layer::create_particles(int n)
+{
   if (nb_particles_create <= 0)
     return;
 
   /* how many particles to create */
   int best_num_particles = MAX_PARTICLES_VECTOR - particles.size();
   n = MAX(best_num_particles,
-          n); // only required to create at least n particles
+          n);                      // only required to create at least n particles
   n = MIN(nb_particles_create, n); // cannot create more than the layer offers
   nb_particles_create -= n;
 
@@ -87,7 +95,8 @@ void Layer::create_particles(int n) {
   particle.index = static_cast<int>(x_ini / dx);
 
   particles.reserve(particles.size() + n);
-  for (int i = 0; i < n; ++i) {
+  for (int i = 0; i < n; ++i)
+  {
     particle.seed = rnd_seed(&seed);
     particle.mu = 2 * rnd_real(&particle.seed) - 1;
 
@@ -101,7 +110,8 @@ void Layer::create_particles(int n) {
 }
 
 int Layer::particle_step(Particle &particle,
-                         std::vector<real_t> &weights_absorbed_local) {
+                         std::vector<real_t> &weights_absorbed_local)
+{
   assert(particle.index >= index_start && particle.index < index_start + m &&
          "Particle index should be in layer at call.");
 
@@ -119,25 +129,32 @@ int Layer::particle_step(Particle &particle,
   int index_new;
   real_t x_new_edge;
 
-  if (particle.mu < 0) {
+  if (particle.mu < 0)
+  {
     index_new = particle.index - 1;
     x_new_edge = particle.index * dx;
-  } else {
+  }
+  else
+  {
     index_new = particle.index + 1;
     x_new_edge = (particle.index + 1) * dx;
   }
 
   real_t di_edge = MAXREAL;
-  if (particle.mu < -EPS_PRECISION || EPS_PRECISION < particle.mu) {
+  if (particle.mu < -EPS_PRECISION || EPS_PRECISION < particle.mu)
+  {
     di_edge = (x_new_edge - particle.x) / particle.mu;
   }
 
-  if (di < di_edge) {
+  if (di < di_edge)
+  {
     /* move inside cell an draw new mu */
     index_new = particle.index;
     particle.x += di * particle.mu;
     particle.mu = 2 * rnd_real(&particle.seed) - 1;
-  } else {
+  }
+  else
+  {
     /* set position to border */
     di = di_edge;
     particle.x = x_new_edge;
@@ -162,44 +179,54 @@ int Layer::particle_step(Particle &particle,
 }
 
 int Layer::simulate_particle(Particle &particle,
-                             std::vector<real_t> &weights_absorbed_local) {
+                             std::vector<real_t> &weights_absorbed_local)
+{
   while ((particle.wmc >= particle_min_weight) &&
          (particle.index < index_start + m) &&
-         (particle.index >= index_start)) {
+         (particle.index >= index_start))
+  {
     particle_step(particle, weights_absorbed_local);
   }
 
-  if (particle.index == index_start - 1) {
+  if (particle.index == index_start - 1)
+  {
     return -1;
   }
 
-  if (particle.index == index_start + m) {
+  if (particle.index == index_start + m)
+  {
     return +1;
   }
 
-  if (particle.wmc < particle_min_weight) {
+  if (particle.wmc < particle_min_weight)
+  {
     return 0;
   }
 
   return -1;
 }
 
-void Layer::simulate_helper(int nb_particles, int nthread) {
-  if (nb_particles == -1) {
-    while ((particles.size() > 0) || (nb_particles_create > 0)) {
+void Layer::simulate_helper(int nb_particles, int nthread)
+{
+  if (nb_particles == -1)
+  {
+    while ((particles.size() > 0) || (nb_particles_create > 0))
+    {
       simulate(MAX_PARTICLES_VECTOR, nthread);
     }
   }
 
   while ((nb_particles > 0) &&
-         (particles.size() > 0 || nb_particles_create > 0)) {
+         (particles.size() > 0 || nb_particles_create > 0))
+  {
     int nb_particles_this_call = MIN(nb_particles, MAX_PARTICLES_VECTOR);
     simulate(nb_particles_this_call, nthread);
     nb_particles -= nb_particles_this_call;
   }
 }
 
-void Layer::simulate(int nb_particles, int nthread) {
+void Layer::simulate(int nb_particles, int nthread)
+{
   if ((nb_particles == -1) || (nb_particles > MAX_PARTICLES_VECTOR))
     simulate_helper(nb_particles, nthread);
 
@@ -208,7 +235,8 @@ void Layer::simulate(int nb_particles, int nthread) {
 
   nb_particles = MIN((int)particles.size(), nb_particles);
 
-  if (nb_particles <= 0) {
+  if (nb_particles <= 0)
+  {
     return;
   }
 
@@ -220,27 +248,31 @@ void Layer::simulate(int nb_particles, int nthread) {
     omp_set_num_threads(nthread);
 #endif
 
-#pragma omp parallel default(none)                                             \
+#pragma omp parallel default(none) \
     firstprivate(result, particles_size, nb_particles)
   {
     std::vector<real_t> weights_absorbed_local;
     weights_absorbed_local.resize(weights_absorbed.size(), 0.0);
 #pragma omp for schedule(static)
-    for (int i = 0; i < nb_particles; i++) {
+    for (int i = 0; i < nb_particles; i++)
+    {
       result[i] = simulate_particle(particles[particles_size - 1 - i],
                                     weights_absorbed_local);
     }
 
 #pragma omp critical
     {
-      for (int j = 0; j < (int)weights_absorbed.size(); j++) {
+      for (int j = 0; j < (int)weights_absorbed.size(); j++)
+      {
         weights_absorbed[j] += weights_absorbed_local[j];
       }
     }
   }
 
-  for (int i = 0; i < nb_particles; i++) {
-    switch (result[i]) {
+  for (int i = 0; i < nb_particles; i++)
+  {
+    switch (result[i])
+    {
     case -1:
       particles_left.push_back(particles[particles_size - 1 - i]);
       break;
@@ -255,26 +287,31 @@ void Layer::simulate(int nb_particles, int nthread) {
 
   particles.resize(particles.size() - nb_particles);
 
-  if (left_border) {
+  if (left_border)
+  {
     nb_disabled += particles_left.size();
     particles_left.clear();
   }
 
-  if (right_border) {
+  if (right_border)
+  {
     nb_disabled += particles_right.size();
     particles_right.clear();
   }
 }
 
-void Layer::dump_WA() {
+void Layer::dump_WA()
+{
   FILE *file;
   file = fopen("WA.out", "w");
-  if (!file) {
+  if (!file)
+  {
     fprintf(stderr, "Couldn't open file WA.out for writing.\n");
     exit(1);
   }
 
-  for (int i = 0; i < (int)weights_absorbed.size(); ++i) {
+  for (int i = 0; i < (int)weights_absorbed.size(); ++i)
+  {
     fprintf(file, "%.4e %.3e\n", x_min + (i * dx) + 0.5 * dx,
             weights_absorbed[i] / dx);
   }
