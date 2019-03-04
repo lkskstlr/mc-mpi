@@ -23,7 +23,7 @@ __global__ void particle_step_kernel(int n,
   Particle* particles,
   float const* const sigs_in,
   float const* const absorption_rates_in,
-  float * const weights_absorbed_in)
+  float * const weights_absorbed_out)
 {
   extern __shared__ float sdata[];
 
@@ -36,7 +36,7 @@ __global__ void particle_step_kernel(int n,
     if (cpy_ind < NCELLS){
       sigs[cpy_ind] = sigs_in[cpy_ind];
       absorption_rates[cpy_ind] = absorption_rates_in[cpy_ind];
-      weights_absorbed[cpy_ind] = weights_absorbed_in[cpy_ind];
+      weights_absorbed[cpy_ind] = 0;
     }
   }
   __syncthreads();
@@ -87,25 +87,17 @@ __global__ void particle_step_kernel(int n,
 
     /* Weight removed from particle is added to the layer */
     particle.wmc -= dw;
-    // if (particle.index == 707){
-    //   printf("Adding: i = %d, dw = %f\n", i, dw);
-    // }
-    // UHIHUHIHUHUH doesn't exist!
     atomicAdd(weights_absorbed + particle.index, dw);
     particle.index = index_new;
 
     particles[i] = particle;
   }
-  __syncthreads();
-  if (threadIdx.x == 0){
-    printf("Block %d, weights_absorbed[707] = %f\n", blockIdx.x, weights_absorbed[707]);
-  }
-  __syncthreads();
 
+  __syncthreads();
   for (int j = 0; j < DIV_UP(NCELLS, blockDim.x); j++){
     int cpy_ind = j*blockDim.x + threadIdx.x;
     if (cpy_ind < NCELLS){
-      atomicAdd(weights_absorbed_in + cpy_ind, weights_absorbed[cpy_ind]);
+      atomicAdd(weights_absorbed_out + cpy_ind, weights_absorbed[cpy_ind]);
     }
   }
 }

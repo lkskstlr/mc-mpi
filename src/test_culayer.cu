@@ -13,7 +13,7 @@
 // https://devblogs.nvidia.com/using-shared-memory-cuda-cc/
 
 #define DIV_UP(x,y) (1 + ((x - 1) / y))
-#define FLOAT_CMP_PREC (1e-7)
+#define FLOAT_CMP_PREC (1e-6)
 
 inline bool particle_cmp(Particle x, Particle y){
   return
@@ -25,13 +25,13 @@ inline bool particle_cmp(Particle x, Particle y){
 }
 
 int main(int argc, char** argv) {
+  int nb_particles = argc == 2 ? atoi(argv[1]) : 1024;
   constexpr real_t x_min = 0.0;
   constexpr real_t x_max = 1.0;
   const real_t x_ini = sqrtf(2.0) / 2.0;
   constexpr int world_size = 1;
   constexpr int world_rank = 0;
   constexpr int nb_cells_per_layer = 1000;
-  constexpr int nb_particles = 9000;
   constexpr real_t particle_min_weight = 0.0;
 
   Layer layer(decompose_domain(x_min, x_max, x_ini, world_size, world_rank,

@@ -274,6 +274,13 @@ if(CUDA_ENABLED)
   target_link_libraries(test_culayer
     PRIVATE culayer types layer gpu_errcheck
   )
+
+  add_executable(test_cuatomic_add src/test_cuatomic_add.cu)
+  target_compile_features(test_cuatomic_add PRIVATE cxx_std_11)
+  set_target_properties(test_cuatomic_add PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+  target_link_libraries(test_cuatomic_add
+    PRIVATE gpu_errcheck
+  )
 endif(CUDA_ENABLED)
 
 ########## CTest ##########
