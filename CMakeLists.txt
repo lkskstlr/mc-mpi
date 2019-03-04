@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
 project(mc-mpi C CXX)
 
+cmake_policy(SET CMP0074 NEW)
+
 option(CUDA_ENABLED "Build and test with CUDA support." OFF)
 
 
@@ -32,9 +34,12 @@ RelWithDebInfo MinSizeRel."
 endif(NOT CMAKE_BUILD_TYPE)
 
 ########## Global Compile Flags ##########
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror -pedantic")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Werror -pedantic")
-
+if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 4.9)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Werror")
+else()
+  message(WARNING "Old compiler version. Compiling without -Wall -Werror -pedantic")
+endif()
 
 ########## Required Packages ##########
 find_package(OpenMP REQUIRED)
@@ -130,7 +135,11 @@ add_library(mcmpi SHARED
   src/worker_async.cpp
   src/worker_rma.cpp
 )
-target_compile_features(mcmpi PUBLIC cxx_lambda_init_captures)
+if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 4.9)
+  target_compile_features(mcmpi PUBLIC cxx_lambda_init_captures)
+else()
+  message(WARNING "The compiler version is ${CMAKE_CXX_COMPILER_VERSION} and it might not support init captures.")
+endif()
 target_include_directories(mcmpi PUBLIC include/mcmpi)
 set_target_properties(mcmpi PROPERTIES
   CXX_STANDARD 11
