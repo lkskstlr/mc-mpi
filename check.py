@@ -16,7 +16,7 @@ plt.plot(df_w['x'], df_w['weight'], '+-', label="parallel")
 plt.plot(data_w[:, 0], data_w[:, 1], 'm--.', label="sequential (reference)")
 plt.title("Weights after Simulation")
 plt.legend()
-plt.savefig("fig_weights.png", format='png', dpi=300)
+plt.show()
 
 stats = pd.read_csv("build/out/stats.csv", skipinitialspace=True)
 stats = stats.loc[:, ~stats.columns.str.contains('^Unnamed')]
