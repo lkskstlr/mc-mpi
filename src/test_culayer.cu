@@ -13,7 +13,7 @@
 // https://devblogs.nvidia.com/using-shared-memory-cuda-cc/
 
 #define DIV_UP(x,y) (1 + ((x - 1) / y))
-#define FLOAT_CMP_PREC (1e-6)
+#define FLOAT_CMP_PREC (1e-4)
 
 inline bool particle_cmp(Particle x, Particle y){
   return
@@ -25,7 +25,7 @@ inline bool particle_cmp(Particle x, Particle y){
 }
 
 int main(int argc, char** argv) {
-  int nb_particles = argc == 2 ? atoi(argv[1]) : 1024;
+  int nb_particles = 100000;
   constexpr real_t x_min = 0.0;
   constexpr real_t x_max = 1.0;
   const real_t x_ini = sqrtf(2.0) / 2.0;
@@ -49,11 +49,29 @@ int main(int argc, char** argv) {
   memcpy(cu_weights_absorbed, layer.weights_absorbed.data(), sizeof(float)*nb_cells_per_layer);
   memcpy(cu_particles, layer.particles.data(), sizeof(Particle)*nb_particles);
 
+  float total_cpu = 0.0;
+  float total_gpu = 0.0;
+  for (int i = 0; i < nb_particles; i++) total_cpu += layer.particles[i].wmc;
+  for (int i = 0; i < nb_particles; i++) total_gpu += cu_particles[i].wmc;
 
+  printf("CPU: %f\n", total_cpu);
+  printf("GPU: %f\n", total_gpu);
+
+  int steps = 10000;
+  printf("steps = %d\n", steps);
+  struct timeval  tv1, tv2;
+  gettimeofday(&tv1, NULL);
   /* --- Simulate with Layer --- */
-  for (int i = 0; i < nb_particles; i++){
-    layer.particle_step(layer.particles[i], layer.weights_absorbed);
+  for (int step = 0; step < steps; step++){
+    for (int i = 0; i < nb_particles; i++){
+      if (layer.particles[i].index >= 0 && layer.particles[i].index < nb_cells_per_layer){
+        layer.particle_step(layer.particles[i], layer.weights_absorbed);
+      }
+    }
   }
+  gettimeofday(&tv2, NULL);
+  double time_cpu = (double) (tv2.tv_usec - tv1.tv_usec) / 1000000 + (double) (tv2.tv_sec - tv1.tv_sec);
+  
 
   /* --- Alloc on GPU --- */
   float *d_cu_sigs, *d_cu_absorption_rates, *d_cu_weights_absorbed;
@@ -71,6 +89,7 @@ int main(int argc, char** argv) {
   printf("After  Allocation: Free = %4zu MB, Total = %zu MB\n", free_mem/B_to_MB, total_mem/B_to_MB);
 
   /* Copy to GPU */
+  gettimeofday(&tv1, NULL);
   gpu_errcheck( cudaMemcpy(d_cu_sigs, cu_sigs, sizeof(float) * nb_cells_per_layer, cudaMemcpyHostToDevice) );
   gpu_errcheck( cudaMemcpy(d_cu_absorption_rates, cu_absorption_rates, sizeof(float) * nb_cells_per_layer, cudaMemcpyHostToDevice) );
   gpu_errcheck( cudaMemcpy(d_cu_weights_absorbed, cu_weights_absorbed, sizeof(float) * nb_cells_per_layer, cudaMemcpyHostToDevice) );
@@ -81,7 +100,7 @@ int main(int argc, char** argv) {
   /* Invoke Kernel */
   size_t n_shared_mem = sizeof(float)*3*nb_cells_per_layer;
   particle_step_kernel<<<DIV_UP(nb_particles, 1024), 1024, n_shared_mem>>>(
-    nb_particles, d_cu_particles, d_cu_sigs, d_cu_absorption_rates, d_cu_weights_absorbed);
+    nb_particles, d_cu_particles, steps, d_cu_sigs, d_cu_absorption_rates, d_cu_weights_absorbed);
   gpu_errcheck( cudaPeekAtLastError() );
   gpu_errcheck( cudaDeviceSynchronize() );
 
@@ -89,6 +108,14 @@ int main(int argc, char** argv) {
   /* Copy back from GPU */
   gpu_errcheck( cudaMemcpy(cu_weights_absorbed, d_cu_weights_absorbed, sizeof(float) * nb_cells_per_layer, cudaMemcpyDeviceToHost) );
   gpu_errcheck( cudaMemcpy(cu_particles, d_cu_particles, sizeof(Particle) * nb_particles, cudaMemcpyDeviceToHost) );
+  gpu_errcheck( cudaDeviceSynchronize() );
+
+  gettimeofday(&tv2, NULL);
+  double time_gpu = (double) (tv2.tv_usec - tv1.tv_usec) / 1000000 + (double) (tv2.tv_sec - tv1.tv_sec);
+
+  printf ("CPU = %f seconds\n", time_cpu);
+  printf ("GPU = %f seconds\n", time_gpu);
+
 
   /* Compare */
   for (int i = 0; i < nb_particles; i++){
@@ -105,15 +132,26 @@ int main(int argc, char** argv) {
       fprintf(stderr, "Weights absorbed at j = %d are not equal\n", j);
       fprintf(stderr, "CPU: %f\n", layer.weights_absorbed[j]);
       fprintf(stderr, "GPU: %f\n", cu_weights_absorbed[j]);
+      exit(EXIT_FAILURE);
     }
   }
 
-  float total_cpu = 0.0;
-  float total_gpu = 0.0;
+  total_cpu = 0.0;
+  total_gpu = 0.0;
   for (int i = 0; i < nb_particles; i++) total_cpu += layer.particles[i].wmc;
   for (int i = 0; i < nb_particles; i++) total_gpu += cu_particles[i].wmc;
 
   printf("CPU: %f\n", total_cpu);
   printf("GPU: %f\n", total_gpu);
+
+  int active_count_cpu = 0;
+  int active_count_gpu = 0;
+  for (int i = 0; i < nb_particles; i++)
+    active_count_cpu += (int)(layer.particles[i].index >= 0 && layer.particles[i].index < nb_cells_per_layer);
+  for (int i = 0; i < nb_particles; i++)
+    active_count_gpu += (int)(cu_particles[i].index >= 0 && cu_particles[i].index < nb_cells_per_layer);
+
+  printf("CPU: %d\n", active_count_cpu);
+  printf("GPU: %d\n", active_count_gpu);
   return 0;
 }

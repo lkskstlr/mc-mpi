@@ -21,6 +21,7 @@ __device__ __forceinline__ float cu_rnd_real(seed_t* seed) {
 
 __global__ void particle_step_kernel(int n,
   Particle* particles,
+  int steps,
   float const* const sigs_in,
   float const* const absorption_rates_in,
   float * const weights_absorbed_out)
@@ -46,50 +47,56 @@ __global__ void particle_step_kernel(int n,
   if (i < n){
     Particle particle = particles[i];
 
-    const float interaction_rate = 1.0 - absorption_rates[particle.index];
-    const float sig_a = sigs[particle.index] * absorption_rates[particle.index];
-    const float sig_i = sigs[particle.index] * interaction_rate;
+    for (int step = 0; step < steps; step++){
+      if (particle.index >= 0 && particle.index < NCELLS)
+      {
+        const float interaction_rate = 1.0 - absorption_rates[particle.index];
+        const float sig_a = sigs[particle.index] * absorption_rates[particle.index];
+        const float sig_i = sigs[particle.index] * interaction_rate;
 
-    // calculate theoretic movement
-    const float h = cu_rnd_real(&particle.seed);
-    float di = MAXREAL;
-    if (sig_i > EPS_PRECISION){
-      // This should always be true
-      di = -log(h) / sig_i;
+        // calculate theoretic movement
+        const float h = cu_rnd_real(&particle.seed);
+        float di = MAXREAL;
+        if (sig_i > EPS_PRECISION){
+          // This should always be true
+          di = -log(h) / sig_i;
+        }
+
+        // -- possible new cell --
+        float mu_sign = copysignf(1.0, particle.mu);
+        int index_new = __float2int_rn(mu_sign) + particle.index;
+        float x_new_edge = particle.index * DX;
+        if (mu_sign == 1){
+          x_new_edge += DX;
+        }
+
+        float di_edge = MAXREAL;
+        if (particle.mu < -EPS_PRECISION || EPS_PRECISION < particle.mu){
+          di_edge = (x_new_edge - particle.x) / particle.mu;
+        }
+
+        if (di < di_edge) {
+          /* move inside cell an draw new mu */
+          index_new = particle.index;
+          particle.x += di * particle.mu;
+          particle.mu = 2 * cu_rnd_real(&particle.seed) - 1;
+        } else {
+          /* set position to border */
+          di = di_edge;
+          particle.x = x_new_edge;
+        }
+
+        // -- Calculate amount of absorbed energy --
+        const float dw = (1 - expf(-sig_a * di)) * particle.wmc;
+
+        /* Weight removed from particle is added to the layer */
+        particle.wmc -= dw;
+        atomicAdd(weights_absorbed + particle.index, dw);
+        particle.index = index_new;
+
+        
+      }
     }
-
-    // -- possible new cell --
-    float mu_sign = copysignf(1.0, particle.mu);
-    int index_new = __float2int_rn(mu_sign) + particle.index;
-    float x_new_edge = particle.index * DX;
-    if (mu_sign == 1){
-      x_new_edge += DX;
-    }
-
-    float di_edge = MAXREAL;
-    if (particle.mu < -EPS_PRECISION || EPS_PRECISION < particle.mu){
-      di_edge = (x_new_edge - particle.x) / particle.mu;
-    }
-
-    if (di < di_edge) {
-      /* move inside cell an draw new mu */
-      index_new = particle.index;
-      particle.x += di * particle.mu;
-      particle.mu = 2 * cu_rnd_real(&particle.seed) - 1;
-    } else {
-      /* set position to border */
-      di = di_edge;
-      particle.x = x_new_edge;
-    }
-
-    // -- Calculate amount of absorbed energy --
-    const float dw = (1 - expf(-sig_a * di)) * particle.wmc;
-
-    /* Weight removed from particle is added to the layer */
-    particle.wmc -= dw;
-    atomicAdd(weights_absorbed + particle.index, dw);
-    particle.index = index_new;
-
     particles[i] = particle;
   }
 

@@ -5,6 +5,7 @@
 #include <cuda.h>
 
 __global__ void particle_step_kernel(int n, Particle *particles,
+                                     int steps,
                                      float const *const sigs_in,
                                      float const *const absorption_rates_in,
                                      float *const weights_absorbed_in);

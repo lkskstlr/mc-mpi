@@ -306,4 +306,7 @@ if(CUDA_ENABLED)
 
   add_test(NAME TestCudaRandom COMMAND ./test_curandom)
   set_tests_properties(TestRmaSerialization PROPERTIES TIMEOUT 20)
+
+  add_test(NAME TestCuLayer COMMAND ./test_culayer)
+  set_tests_properties(TestCuLayer PROPERTIES TIMEOUT 20)
 endif(CUDA_ENABLED)
