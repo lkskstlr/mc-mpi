@@ -81,6 +81,8 @@ void WorkerAsync::spin()
     /* Idle */
     timer.change(timestamp, Timer::Tag::Idle);
     {
+      particle_comm.free();
+      state_comm.free();
       std::chrono::duration<double, std::milli> elapsed = high_resolution_clock::now() - start;
       if (elapsed.count() < options.cycle_time * 1e3)
       {

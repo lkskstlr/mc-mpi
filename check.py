@@ -30,6 +30,7 @@ for proc in range(0, world_size):
     X = stats[stats['rank'] == proc]
     if proc == 0:
         ax0 = plt.subplot(world_size, 1, proc+1)
+        ax = ax0
     else:
         ax = plt.subplot(world_size, 1, proc+1, sharex=ax0)
     
@@ -41,14 +42,13 @@ for proc in range(0, world_size):
         labels=["Comp", "Send", "Recv", "Idle"])
     
     
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
     if proc == world_size-1:
-        if world_size == 1:
-            ax = ax0
         plt.legend()
-        ax.spines['right'].set_visible(False)
-        ax.spines['top'].set_visible(False)
         plt.xlabel("Seconds")
         plt.ylabel("Seconds")
     else:
-        plt.axis("off")
+        plt.ylabel("Seconds")
+        ax.get_xaxis().set_visible(False)
 plt.show()

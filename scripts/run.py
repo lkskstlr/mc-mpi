@@ -81,16 +81,60 @@ def main_scaling():
     return res
 
 
+def main_scaling_particles_cycle():
+    m = 2
+    modes = ["sync", "async", "rma"]
+    with open("../config.yaml", "r") as file:
+        config = yaml.load(file)
+    configs = dict()
+    for mode in modes:
+        configs[mode] = config.copy()
+    
+    N = np.array([100, 1000, 5000, 10000, 25000, 50000, 65000])
+    #N = np.array([1, 5])
+    res = dict()
+    res["N"] = N
+    res['modes'] = modes
+
+    for mode in modes:
+        print(mode)
+        res[mode] = dict()
+        res[mode]["means"] = np.zeros(N.shape, dtype=np.float)
+        res[mode]["std"]   = np.zeros(N.shape, dtype=np.float)
+        
+        
+        for i, n in enumerate(N):
+            configs[mode]['nb_particles_per_cycle'] = int(n)
+            with open("config.yaml", "w") as file:
+                yaml.dump(configs[mode], file, default_flow_style=False)
+            
+            times = np.zeros((m,), dtype=np.float)
+            print("\t{}: ".format(n), end="")
+            for j in range(m):
+                s = "salloc -N 5 -n 5 mpirun ./main config.yaml {}".format(mode)
+                p = subprocess.Popen(s, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                p.wait()
+                lines = [x.decode('ascii').rstrip() for x in p.stdout.readlines()]
+                times[j] = float(lines[1])
+                print(times[j], end=" ")
+                
+            res[mode]["means"][i] = np.mean(times)
+            res[mode]["std"][i] = np.std(times)
+            print("")
+            
+    return res
+
+
 if __name__ == "__main__":
     if not os.path.exists("data.pickle"):
         print("Running Simulations")
-        res = main_scaling()
         nthreads, means, std = layer_perf()
         
         data = {
             'nthreads': nthreads,
             'means': means,
-            'res': res
+            'res': main_scaling(),
+            'res_particles_cycle': main_scaling_particles_cycle()
         }
         
         with open('data.pickle', 'wb') as file:
@@ -116,5 +160,16 @@ if __name__ == "__main__":
     plt.xlabel("Number of MPI nodes")
     plt.ylabel("Runtime in s")
     plt.savefig("scaling.png")
+    
+    
+    plt.figure()
+    for mode in data['res_particles_cycle']['modes']:
+        plt.plot(data['res_particles_cycle']['N'], data['res_particles_cycle'][mode]['means'], '+-', label=mode)
+    plt.legend()
+    plt.title("MPI Scaling Analysis")
+    plt.xlabel("Number of Particles per Step")
+    plt.ylabel("Runtime in s")
+    plt.savefig("scaling_particles_cycle.png")
+    
     
     
