@@ -9,8 +9,8 @@ import os
 
 def layer_perf():
     m = 2
-    nthreads = np.arange(1, 9)
-    # nthreads = np.array([4, 8])
+    #nthreads = np.arange(1, 9)
+    nthreads = np.array([4])
     means = np.zeros(nthreads.shape, dtype=np.float)
     std = np.zeros(nthreads.shape, dtype=np.float)
     times = np.zeros((m,), dtype=np.float)
@@ -34,6 +34,19 @@ def layer_perf():
 def main_scaling():
     m = 2
     modes = ["sync", "async", "rma"]
+    with open("../config.yaml", "r") as file:
+        config = yaml.load(file)
+    configs = dict()
+    for mode in modes:
+        configs[mode] = config.copy()
+    configs['sync']['nb_particles_per_cycle'] = 100000
+    configs['async']['nb_particles_per_cycle'] = 1000
+    configs['rma']['nb_particles_per_cycle'] = 65000
+    
+    print("=== Configs ===")
+    for mode in modes:
+        print("{}: {}".format(mode, configs[mode]))
+    print("===============")
     N = np.array([1, 2, 4, 5, 8, 10])
     #N = np.array([1, 5])
     res = dict()
@@ -45,11 +58,14 @@ def main_scaling():
         res[mode] = dict()
         res[mode]["means"] = np.zeros(N.shape, dtype=np.float)
         res[mode]["std"]   = np.zeros(N.shape, dtype=np.float)
+        with open("config.yaml", "w") as file:
+            yaml.dump(configs[mode], file, default_flow_style=False)
+        
         for i, n in enumerate(N):
             times = np.zeros((m,), dtype=np.float)
             print("\t{}: ".format(n), end="")
             for j in range(m):
-                s = "salloc -N {:d} -n {:d} mpirun ./main ../config.yaml {}".format(n, n, mode)
+                s = "salloc -N {:d} -n {:d} mpirun ./main config.yaml {}".format(n, n, mode)
                 p = subprocess.Popen(s, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
                 p.wait()
                 lines = [x.decode('ascii').rstrip() for x in p.stdout.readlines()]
@@ -68,8 +84,8 @@ def main_scaling():
 if __name__ == "__main__":
     if not os.path.exists("data.pickle"):
         print("Running Simulations")
-        nthreads, means, std = layer_perf()
         res = main_scaling()
+        nthreads, means, std = layer_perf()
         
         data = {
             'nthreads': nthreads,
