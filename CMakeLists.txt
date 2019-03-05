@@ -34,11 +34,16 @@ RelWithDebInfo MinSizeRel."
 endif(NOT CMAKE_BUILD_TYPE)
 
 ########## Global Compile Flags ##########
-if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 4.9)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror")
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Werror")
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+  if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 4.9)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror -pedantic")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Werror -pedantic")
+  else()
+    message(STATUS "Old compiler version. Compiling without -Wall -Werror -pedantic")
+  endif()
 else()
-  message(WARNING "Old compiler version. Compiling without -Wall -Werror -pedantic")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror -pedantic")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Werror -pedantic")
 endif()
 
 ########## Required Packages ##########
@@ -135,10 +140,16 @@ add_library(mcmpi SHARED
   src/worker_async.cpp
   src/worker_rma.cpp
 )
-if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 4.9)
-  target_compile_features(mcmpi PUBLIC cxx_lambda_init_captures)
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+  if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 4.9)
+    target_compile_features(mcmpi PUBLIC cxx_lambda_init_captures)
+  elseif(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 4.8.4)
+    #This actually work
+  else()
+    message(WARNING "The compiler version is ${CMAKE_CXX_COMPILER_VERSION} and it might not support init captures.")
+  endif()
 else()
-  message(WARNING "The compiler version is ${CMAKE_CXX_COMPILER_VERSION} and it might not support init captures.")
+  target_compile_features(mcmpi PUBLIC cxx_lambda_init_captures)
 endif()
 target_include_directories(mcmpi PUBLIC include/mcmpi)
 set_target_properties(mcmpi PROPERTIES
