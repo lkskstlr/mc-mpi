@@ -5,8 +5,10 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
+foldername = "out_35177"
+
 data = dict()
-data['df_w'] = pd.read_csv("build/out/weights.csv", skipinitialspace=True)
+data['df_w'] = pd.read_csv("build/{}/weights.csv".format(foldername), skipinitialspace=True)
 data['data_w'] = np.genfromtxt('tex/data/WA_1000_1000000.out', delimiter=' ')
 
 df_w = data['df_w']
@@ -18,7 +20,7 @@ plt.title("Weights after Simulation")
 plt.legend()
 plt.show()
 
-stats = pd.read_csv("build/out/stats.csv", skipinitialspace=True)
+stats = pd.read_csv("build/{}/stats.csv".format(foldername), skipinitialspace=True)
 stats = stats.loc[:, ~stats.columns.str.contains('^Unnamed')]
 time_min = stats['starttime'].min()
 stats['starttime'] -= time_min

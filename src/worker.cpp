@@ -6,6 +6,7 @@
 #include <dirent.h>
 #include <numeric>
 #include <stdio.h>
+#include <stdlib.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <thread>
@@ -18,7 +19,20 @@ Worker::Worker(int world_rank, const MCMPIOptions &options)
                              options.world_size, world_rank,
                              options.nb_cells_per_layer, options.nb_particles,
                              options.particle_min_weight)),
-      timer() {}
+      timer()
+{
+
+  char *slurm_job_id = getenv("SLURM_JOB_ID");
+  if (slurm_job_id)
+  {
+    char buffer[256] = "out_";
+    foldername = std::string(strcat(buffer, slurm_job_id));
+  }
+  else
+  {
+    foldername = std::string("out");
+  }
+}
 
 void Worker::dump()
 {
@@ -32,12 +46,16 @@ void Worker::dump()
   {
     mkdir_out();
 
-    dump_config();
+    char buffer[256];
+    sprintf(buffer, "%s/config.yaml", foldername.c_str());
+    dump_config(buffer);
     dump_weights_absorbed(total_len, displs, weights);
     layer.dump_WA();
   }
 
-  write_file((char *)"out/stats.csv");
+  char buffer[256];
+  sprintf(buffer, "%s/stats.csv", foldername.c_str());
+  write_file(buffer);
 
   MPI_Barrier(MPI_COMM_WORLD);
 }
@@ -145,9 +163,9 @@ void Worker::gather_weights_absorbed(int *total_len, int **displs,
               recvcounts, *displs, MCMPI_REAL_T, 0, MPI_COMM_WORLD);
 }
 
-void Worker::dump_config()
+void Worker::dump_config(char *filename)
 {
-  YamlDumper yaml_dumper("out/config.yaml");
+  YamlDumper yaml_dumper(filename);
   yaml_dumper.comment("Read from config");
   yaml_dumper.dump_int("nb_cells_per_layer", options.nb_cells_per_layer);
   yaml_dumper.dump_double("x_min", options.x_min);
@@ -177,7 +195,7 @@ std::vector<real_t> Worker::weights_absorbed()
 
 void Worker::mkdir_out()
 {
-  DIR *dir = opendir("out");
+  DIR *dir = opendir(foldername.c_str());
   if (dir)
   {
     struct dirent *next_file;
@@ -190,14 +208,14 @@ void Worker::mkdir_out()
       {
         continue;
       }
-      sprintf(filepath, "%s/%s", "out", next_file->d_name);
+      sprintf(filepath, "%s/%s", foldername.c_str(), next_file->d_name);
       remove(filepath);
     }
 
     closedir(dir);
-    if (remove("out"))
+    if (remove(foldername.c_str()))
     {
-      fprintf(stderr, "Couldn't remove out dir, is it empty?\n");
+      fprintf(stderr, "Couldn't remove %s dir, is it empty?\n", foldername.c_str());
       exit(1);
     }
   }
@@ -211,17 +229,19 @@ void Worker::mkdir_out()
     exit(1);
   }
 
-  mkdir("out", S_IRWXU | S_IRWXG | S_IRWXO);
+  mkdir(foldername.c_str(), S_IRWXU | S_IRWXG | S_IRWXO);
 }
 
 void Worker::dump_weights_absorbed(int total_len, int const *displs,
                                    real_t const *weights)
 {
   FILE *file;
-  file = fopen("out/weights.csv", "w");
+  char buffer[256];
+  sprintf(buffer, "%s/weights.csv", foldername.c_str());
+  file = fopen(buffer, "w");
   if (!file)
   {
-    fprintf(stderr, "Couldn't open file out/weights.csv for writing.\n");
+    fprintf(stderr, "Couldn't open file %s/weights.csv for writing.\n", foldername.c_str());
     exit(1);
   }
 

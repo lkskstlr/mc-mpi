@@ -16,7 +16,8 @@
  * after setup spin() is called. All the control flow and data is handeled by
  * the worker.
  */
-class Worker {
+class Worker
+{
 public:
   /*!
    * \function Worker
@@ -67,9 +68,11 @@ private:
   void write_file(char *filename);
   void gather_weights_absorbed(int *total_len, int **displs, real_t **weights);
   void mkdir_out();
-  void dump_config();
+  void dump_config(char *filename);
   void dump_weights_absorbed(int total_len, int const *displs,
                              real_t const *weights);
+
+  std::string foldername;
 };
 
 MCMPIOptions options_from_config(std::string filepath, int world_size);
