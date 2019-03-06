@@ -38,8 +38,7 @@ void particle_sort(
     }
   }
 }
-
-void simulate(int n,
+void cusimulate(int n,
   Particle* particles,
   float const* const sigs,
   float const* const absorption_rates,
@@ -73,7 +72,6 @@ void simulate(int n,
     while(n_active > 0){
       gpu_errcheck( cudaMemcpy(d_particles, particles, sizeof(Particle) * n_active, cudaMemcpyHostToDevice) );
 
-      printf("%d\n", n_active);
       particle_step_kernel<<<DIV_UP(n_active, 256), 256, sizeof(float) * 3 * n_cells >>>(
         n_active, d_particles, steps, d_sigs, d_absorption_rates, d_weights_absorbed, min_index, max_index, dx );
       gpu_errcheck( cudaPeekAtLastError() );

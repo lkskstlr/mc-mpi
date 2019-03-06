@@ -67,7 +67,7 @@ endif()
 
 
 ########## Libraries ##########
-add_library(yaml SHARED
+add_library(yaml STATIC
   src/yaml_loader.cpp
   src/yaml_dumper.cpp
 )
@@ -79,7 +79,7 @@ set_target_properties(yaml PROPERTIES
 )
 
 
-add_library(timer SHARED
+add_library(timer STATIC
   src/timer.cpp
 )
 target_include_directories(timer PUBLIC include/timer)
@@ -98,14 +98,38 @@ target_include_directories(types INTERFACE include/types)
 target_compile_features(types INTERFACE cxx_std_11)
 
 
-add_library(random SHARED src/random.cpp)
+add_library(random STATIC src/random.cpp)
 target_include_directories(random PUBLIC include/random)
 target_link_libraries(random
   PUBLIC types
 )
 
 
-add_library(layer SHARED src/layer.cpp)
+if(CUDA_ENABLED)
+  add_library(gpu_errcheck INTERFACE)
+  target_include_directories(gpu_errcheck INTERFACE include/gpu_errcheck)
+
+
+  add_library(curandom STATIC src/curandom.cu)
+  target_include_directories(curandom PUBLIC include/curandom)
+  target_compile_features(curandom PRIVATE cxx_std_11)
+  set_target_properties(curandom PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+  target_link_libraries(curandom
+    PUBLIC types
+  )
+
+
+  add_library(culayer STATIC src/culayer.cu src/culayer_kernel.cu)
+  target_include_directories(culayer PUBLIC include/culayer)
+  target_compile_features(culayer PRIVATE cxx_std_11)
+  set_target_properties(culayer PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+  target_link_libraries(culayer
+    PUBLIC types gpu_errcheck
+  )
+endif(CUDA_ENABLED)
+
+
+add_library(layer STATIC src/layer.cpp)
 target_include_directories(layer PUBLIC include/layer)
 set_target_properties(layer PROPERTIES
   CXX_STANDARD 11
@@ -116,9 +140,15 @@ target_link_libraries(layer
   PUBLIC types
   PRIVATE random OpenMP::OpenMP_CXX
 )
+if(CUDA_ENABLED)
+  target_compile_definitions(layer PUBLIC -DCUDA_ENABLED)
+  target_link_libraries(layer
+  PRIVATE culayer
+  )
+endif()
 
 
-add_library(comm SHARED
+add_library(comm STATIC
   src/stats.cpp
   src/async_comm-impl.cpp
   src/async_comm.cpp
@@ -138,7 +168,7 @@ target_link_libraries(comm
   PUBLIC types MPI::MPI_C
 )
 
-add_library(mcmpi SHARED
+add_library(mcmpi STATIC
   src/worker.cpp
   src/worker_sync.cpp
   src/worker_async.cpp
@@ -166,28 +196,6 @@ target_link_libraries(mcmpi
   PRIVATE yaml
 )
 
-if(CUDA_ENABLED)
-  add_library(gpu_errcheck INTERFACE)
-  target_include_directories(gpu_errcheck INTERFACE include/gpu_errcheck)
-
-
-  add_library(curandom STATIC src/curandom.cu)
-  target_include_directories(curandom PUBLIC include/curandom)
-  target_compile_features(curandom PRIVATE cxx_std_11)
-  set_target_properties(curandom PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
-  target_link_libraries(curandom
-    PUBLIC types
-  )
-
-
-  add_library(culayer STATIC src/culayer.cu src/culayer_kernel.cu)
-  target_include_directories(culayer PUBLIC include/culayer)
-  target_compile_features(culayer PRIVATE cxx_std_11)
-  set_target_properties(culayer PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
-  target_link_libraries(culayer
-    PUBLIC types gpu_errcheck
-  )
-endif(CUDA_ENABLED)
 
 ########## Scripts ##########
 configure_file(scripts/save_run save_run COPYONLY)

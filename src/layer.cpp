@@ -5,6 +5,9 @@
 #include <omp.h>
 #include <stdio.h>
 #include <stdlib.h>
+#ifdef CUDA_ENABLED
+#include "culayer.hpp"
+#endif
 
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
@@ -206,13 +209,13 @@ int Layer::simulate_particle(Particle &particle,
   return -1;
 }
 
-void Layer::simulate_helper(int nb_particles, int nthread)
+void Layer::simulate_helper(int nb_particles, int nthread, bool use_gpu)
 {
   if (nb_particles == -1)
   {
     while ((particles.size() > 0) || (nb_particles_create > 0))
     {
-      simulate(MAX_PARTICLES_VECTOR, nthread);
+      simulate(MAX_PARTICLES_VECTOR, nthread, use_gpu);
     }
   }
 
@@ -220,15 +223,15 @@ void Layer::simulate_helper(int nb_particles, int nthread)
          (particles.size() > 0 || nb_particles_create > 0))
   {
     int nb_particles_this_call = MIN(nb_particles, MAX_PARTICLES_VECTOR);
-    simulate(nb_particles_this_call, nthread);
+    simulate(nb_particles_this_call, nthread, use_gpu);
     nb_particles -= nb_particles_this_call;
   }
 }
 
-void Layer::simulate(int nb_particles, int nthread)
+void Layer::simulate(int nb_particles, int nthread, bool use_gpu)
 {
   if ((nb_particles == -1) || (nb_particles > MAX_PARTICLES_VECTOR))
-    simulate_helper(nb_particles, nthread);
+    simulate_helper(nb_particles, nthread, use_gpu);
 
   if (((int)particles.size() < nb_particles) && nb_particles_create > 0)
     create_particles(nb_particles);
@@ -239,6 +242,55 @@ void Layer::simulate(int nb_particles, int nthread)
   {
     return;
   }
+
+#ifdef CUDA_ENABLED
+  if (use_gpu)
+  {
+    float *const weights_absorbed_local = (float *)calloc(sizeof(float), weights_absorbed.size());
+    const int particles_size = particles.size();
+    cusimulate(nb_particles, particles.data() + particles_size - nb_particles, sigs.data(), absorption_rates.data(),
+               weights_absorbed_local,
+               index_start,
+               index_start + m,
+               dx);
+    for (int i = 0; i < nb_particles; i++)
+    {
+      if (particles[particles_size - i - 1].index == index_start - 1)
+        particles_left.push_back(particles[particles_size - 1 - i]);
+      else if (particles[particles_size - i - 1].index == index_start + m)
+        particles_right.push_back(particles[particles_size - 1 - i]);
+      else
+      {
+        if (particles[particles_size - i - 1].wmc <= particle_min_weight)
+          nb_disabled++;
+        else
+        {
+          fprintf(stderr, "There was a particle which was not disabled nor transported");
+          exit(EXIT_FAILURE);
+        }
+      }
+    }
+
+    for (int j = 0; j < (int)weights_absorbed.size(); j++)
+    {
+      weights_absorbed[j] += weights_absorbed_local[j];
+    }
+    particles.resize(particles_size - nb_particles);
+
+    if (left_border)
+    {
+      nb_disabled += particles_left.size();
+      particles_left.clear();
+    }
+
+    if (right_border)
+    {
+      nb_disabled += particles_right.size();
+      particles_right.clear();
+    }
+    return;
+  }
+#endif
 
   int *const result = (int *)malloc(sizeof(int) * nb_particles);
   const int particles_size = particles.size();

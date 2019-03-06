@@ -66,7 +66,7 @@ int main(int argc, char** argv) {
   double time_cpu = (double) (tv2.tv_usec - tv1.tv_usec) / 1000000 + (double) (tv2.tv_sec - tv1.tv_sec);
 
   gettimeofday(&tv1, NULL);
-  simulate(nb_particles, cu_particles, cu_sigs, cu_absorption_rates, cu_weights_absorbed, 0, nb_cells_per_layer, layer.dx);
+  cusimulate(nb_particles, cu_particles, cu_sigs, cu_absorption_rates, cu_weights_absorbed, 0, nb_cells_per_layer, layer.dx);
   gettimeofday(&tv2, NULL);
   double time_gpu = (double) (tv2.tv_usec - tv1.tv_usec) / 1000000 + (double) (tv2.tv_sec - tv1.tv_sec);
 

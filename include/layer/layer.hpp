@@ -11,7 +11,8 @@
  * \brief Stores one layer and the particles in it. Also does the
  * computations on the particles
  */
-class Layer {
+class Layer
+{
 public:
   /*!
    * \function Layer
@@ -52,7 +53,7 @@ public:
    *
    * \return void
    */
-  void simulate(int nb_particles, int nthread = -1);
+  void simulate(int nb_particles, int nthread = -1, bool use_gpu = false);
 
   /*!
    * \function dump_WA
@@ -78,7 +79,7 @@ public:
                         std::vector<real_t> &weights_absorbed_local);
   int particle_step(Particle &particle,
                     std::vector<real_t> &weights_absorbed_local);
-  void simulate_helper(int nb_particles, int nthread);
+  void simulate_helper(int nb_particles, int nthread, bool use_gpu);
 
   // -- Data --
   const real_t x_min, x_max;
