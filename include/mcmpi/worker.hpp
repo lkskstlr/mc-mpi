@@ -16,8 +16,14 @@
  * after setup spin() is called. All the control flow and data is handeled by
  * the worker.
  */
-class Worker {
+class Worker
+{
 public:
+  typedef struct env_tag
+  {
+    int node_size;
+    int nb_gpu;
+  } Env;
   /*!
    * \function Worker
    *

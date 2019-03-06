@@ -6,19 +6,127 @@
 #include <dirent.h>
 #include <numeric>
 #include <stdio.h>
+#include <mpi.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <thread>
 #include <time.h>
 #include <unistd.h>
 
+float get_power()
+{
+  return 1;
+}
+
+Layer mpi_decompose_domain(MCMPIOptions const &options)
+{
+  //MPI_Status status;
+
+  int my_rank, world_size;
+
+  float r_min, r_max;
+  int cell_min, cell_max;
+
+  int nb_cells = 1000;
+  int cell_weights[1000];
+  int cell_weights_sum;
+  int cell_weights_so_far;
+
+  float computation_power_own;
+  float *computation_power_all;
+  float computation_power_all_sum;
+  float computation_power_so_far;
+
+  int i;
+  int flag_min;
+  int flag_max;
+
+  MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+  MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
+
+  printf("[%d]Debugging\t\tWorld size: %d\t My rank: %d\n", my_rank, world_size, my_rank);
+
+  //Hardcode cell weights and get the total sum
+  for (i = 0, cell_weights_sum = 0; i < nb_cells; i++)
+  {
+    if (i != 707)
+      cell_weights[i] = 1;
+    else
+      cell_weights[i] = 100;
+
+    // cell_weights[i] = i;
+
+    cell_weights_sum += cell_weights[i];
+  }
+
+  printf("\n[%d]Debugging\t\tCells: %d\tCell weights sum: %d\n", my_rank, nb_cells, cell_weights_sum);
+
+  //Get own computing power and allocate memory for all of the other ranks' computer power
+  computation_power_own = get_power();
+  computation_power_all = (float *)malloc(world_size * sizeof(float));
+
+  //All ranks communicate among themselves the computing power of each
+  MPI_Allgather(&computation_power_own, 1, MPI_FLOAT, computation_power_all, 1, MPI_FLOAT, MPI_COMM_WORLD);
+
+  // printf("[%d]Debugging\t\tOwn computation power: %f\n", my_rank, computation_power_own);
+  // for (i = 0; i < world_size; i++)
+  // {
+  //   printf("[%d]Computation power rank %d: %f\n", my_rank, i, computation_power_all[i]);
+  // }
+
+  //Get the sum of all compute powers
+  for (i = 0, computation_power_all_sum = 0; i < world_size; i++)
+    computation_power_all_sum += computation_power_all[i];
+
+  //Get the addition of the compute powers so far, EXCLUDING own's
+  for (i = 0, computation_power_so_far = 0; i < my_rank; i++)
+    computation_power_so_far += computation_power_all[i];
+
+  r_min = (cell_weights_sum / computation_power_all_sum) * computation_power_so_far;
+
+  //Get the addition of the compute powers so far, INCLUDING own's
+  computation_power_so_far += computation_power_all[my_rank];
+
+  r_max = (cell_weights_sum / computation_power_all_sum) * computation_power_so_far;
+
+  for (i = 0, cell_weights_so_far = 0, flag_min = 0, flag_max = 0; !(flag_min && flag_max); i++)
+  {
+    if (!flag_min && cell_weights_so_far >= r_min)
+    {
+      cell_min = i;
+      flag_min = 1;
+    }
+    if (!flag_max && cell_weights_so_far >= r_max)
+    {
+      cell_max = i;
+      flag_max = 1;
+    }
+    cell_weights_so_far += cell_weights[i];
+  }
+
+  float x_min_layer = (float)cell_min / (float)nb_cells;
+  float x_max_layer = (float)cell_max / (float)nb_cells;
+
+  Layer layer(x_min_layer, x_max_layer, cell_min, cell_max - cell_min, options.particle_min_weight);
+  if ((x_min_layer <= options.x_ini) && (options.x_ini < x_max_layer))
+  {
+    printf("World rank: %d / %d\n", my_rank, world_size);
+    seed_t seed = 5127801;
+    layer.create_particles(options.x_ini, 1.0 / options.nb_particles, options.nb_particles, seed);
+  }
+
+  MPI_Barrier(MPI_COMM_WORLD);
+  usleep(10000 * my_rank);
+  printf("[%d]r_min: %f\tr_max: %f\tx_min: %f\tx_max: %f\tcell_min: %d\tcell_max: %d\n", my_rank, r_min, r_max, layer.x_min, layer.x_max, cell_min, cell_max);
+  printf("[%d]Layer: index_start = %d, m = %d, x_min = %f, x_max = %f\n", my_rank, layer.index_start, layer.m, layer.x_min, layer.x_max);
+
+  return layer;
+}
+
 Worker::Worker(int world_rank, const MCMPIOptions &options)
-    : world_rank(world_rank), options(options),
-      layer(decompose_domain(options.x_min, options.x_max, options.x_ini,
-                             options.world_size, world_rank,
-                             options.nb_cells_per_layer, options.nb_particles,
-                             options.particle_min_weight)),
-      timer() {}
+    : world_rank(world_rank), options(options), layer(mpi_decompose_domain(options)), timer()
+{
+}
 
 void Worker::dump()
 {
