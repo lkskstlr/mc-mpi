@@ -15,18 +15,26 @@
 #define MAX_PARTICLES_VECTOR 1000000
 
 Layer decompose_domain(real_t x_min, real_t x_max, real_t x_ini, int world_size,
-                       int world_rank, int cells_per_layer, int nb_particles,
+                       int world_rank, int nb_cells, int nb_particles,
                        real_t particle_min_weight)
 {
   assert(x_max > x_min);
-  real_t dx = (x_max - x_min) / world_size;
-  int nc_ini = (int)((x_ini - x_min) / dx);
-  Layer layer(x_min + world_rank * dx, x_min + (1 + world_rank) * dx,
-              world_rank * cells_per_layer, cells_per_layer,
-              particle_min_weight);
-  if (world_rank == nc_ini)
+
+  /* start and end index */
+  int cells_per_layer = nb_cells / world_size;
+  int num_with_extra = nb_cells % world_size;
+  int nb_my_cells = cells_per_layer + (world_rank < num_with_extra);
+  int start_index = world_rank * cells_per_layer + MIN(world_rank, num_with_extra);
+
+  real_t dx = (x_max - x_min) / ((float)nb_cells);
+  int cell_ini = (int)((x_ini - x_min) / dx);
+
+  Layer layer(x_min + start_index * dx, x_min + (start_index + nb_my_cells) * dx,
+              start_index, nb_my_cells, particle_min_weight);
+  if ((cell_ini >= start_index) && (cell_ini < start_index + nb_my_cells))
   {
     seed_t seed = 5127801;
+    printf("Particles created in %d\n", world_rank);
     layer.create_particles(x_ini, 1.0 / nb_particles, nb_particles, seed);
   }
 

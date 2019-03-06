@@ -5,7 +5,7 @@
 
 WorkerAsync::WorkerAsync(int world_rank, const MCMPIOptions &options)
     : Worker(world_rank, options),
-      particle_comm(world_rank, options.buffer_size),
+      particle_comm(world_rank, 1000000000),
       state_comm(options.world_size, world_rank, MCMPIOptions::Tag::State,
                  [nb_particles = options.nb_particles](std::vector<int> msgs) {
                    int sum = std::accumulate(msgs.begin(), msgs.end(), 0);

@@ -17,15 +17,14 @@ Worker::Worker(int world_rank, const MCMPIOptions &options)
     : world_rank(world_rank), options(options),
       layer(decompose_domain(options.x_min, options.x_max, options.x_ini,
                              options.world_size, world_rank,
-                             options.nb_cells_per_layer, options.nb_particles,
+                             options.nb_cells, options.nb_particles,
                              options.particle_min_weight)),
       timer()
 {
-
   char *slurm_job_id = getenv("SLURM_JOB_ID");
   if (slurm_job_id)
   {
-    char buffer[256] = "out_";
+    char buffer[256] = "../out/";
     foldername = std::string(strcat(buffer, slurm_job_id));
   }
   else
@@ -167,7 +166,7 @@ void Worker::dump_config(char *filename)
 {
   YamlDumper yaml_dumper(filename);
   yaml_dumper.comment("Read from config");
-  yaml_dumper.dump_int("nb_cells_per_layer", options.nb_cells_per_layer);
+  yaml_dumper.dump_int("nb_cells", options.nb_cells);
   yaml_dumper.dump_double("x_min", options.x_min);
   yaml_dumper.dump_double("x_max", options.x_max);
   yaml_dumper.dump_double("x_ini", options.x_ini);
@@ -266,19 +265,12 @@ MCMPIOptions options_from_config(std::string filepath, int world_size)
   // // constants
   MCMPIOptions opt;
   opt.world_size = world_size;
-  //opt.nb_cells_per_layer = yaml_loader.load_int("nb_cells_per_layer");
-  if (1000 % world_size != 0)
-  {
-    fprintf(stderr, "1000 is not divideable by world_size\n");
-    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-  }
-  opt.nb_cells_per_layer = 1000 / world_size;
+  opt.nb_cells = yaml_loader.load_int("nb_cells");
   opt.x_min = yaml_loader.load_double("x_min");
   opt.x_max = yaml_loader.load_double("x_max");
   opt.x_ini = yaml_loader.load_double("x_ini");
   opt.particle_min_weight = yaml_loader.load_double("particle_min_weight");
   opt.nb_particles = yaml_loader.load_int("nb_particles");
-  opt.buffer_size = yaml_loader.load_int("buffer_size");
   opt.cycle_time = yaml_loader.load_double("cycle_time");
   opt.nb_particles_per_cycle = yaml_loader.load_int("nb_particles_per_cycle");
   opt.nthread = yaml_loader.load_int("nthread");

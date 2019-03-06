@@ -110,6 +110,6 @@ public:
 };
 
 Layer decompose_domain(real_t x_min, real_t x_max, real_t x_ini, int world_size,
-                       int world_rank, int cells_per_layer, int nb_particles,
+                       int world_rank, int nb_cells, int nb_particles,
                        real_t particle_min_weight);
 #endif

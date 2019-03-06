@@ -5,10 +5,11 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-foldername = "out_35177"
+slurm_job_id = 35215
+folderpath = "out/{}/".format(slurm_job_id)
 
 data = dict()
-data['df_w'] = pd.read_csv("build/{}/weights.csv".format(foldername), skipinitialspace=True)
+data['df_w'] = pd.read_csv(folderpath+"weights.csv", skipinitialspace=True)
 data['data_w'] = np.genfromtxt('tex/data/WA_1000_1000000.out', delimiter=' ')
 
 df_w = data['df_w']
@@ -20,7 +21,7 @@ plt.title("Weights after Simulation")
 plt.legend()
 plt.show()
 
-stats = pd.read_csv("build/{}/stats.csv".format(foldername), skipinitialspace=True)
+stats = pd.read_csv(folderpath+"stats.csv", skipinitialspace=True)
 stats = stats.loc[:, ~stats.columns.str.contains('^Unnamed')]
 time_min = stats['starttime'].min()
 stats['starttime'] -= time_min
