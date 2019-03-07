@@ -18,7 +18,7 @@ import numpy as np
 sha = "ed18ea0b8bc99596a06c58a90d46ef8a30cda6a2"
 filename = "../py_data.pkl"
 foldername = "experiment01"
-test = False
+test = True
 
 def load_data():
     if os.path.exists(filename):
@@ -97,16 +97,23 @@ def sbatch(test=True):
         raise ValueError("Could not match job")
     return int(res.group(1))
     
-    
+
+def check_env():
+    p = subprocess.Popen("which mpirun", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    p.wait()
+    lines = [x.decode('ascii').rstrip() for x in p.stdout.readlines()]
+    assert lines[0] == "/users/profs/2017/francois.trahay/soft/install/openmpi//bin/mpirun", "Not running correct environment. source set_env.sh?"
+
 
 if __name__ == "__main__":
     os.chdir("../{}".format(foldername))
+    check_env()
     
     data = load_data()
     pprint(data)
     
     nthread = 1
-    nb_particles = int(1e8)
+    nb_particles = int(1e4)
     
     ns = np.array([1, 2, 4, 8, 16, 32, 64, 80])
     Ns = np.ceil(ns/8).astype(np.int)
@@ -121,11 +128,12 @@ if __name__ == "__main__":
             job_id = sbatch(test=test)
             if job_id is not None:
                 data[job_id] = {'N': N, 'n': n, 'mode': mode, 'nb_particles': nb_particles, 'foldername': foldername, 'sha': sha}
-                pprint(data)
+                # pprint(data)
             save_data(data)
     
             
     save_data(data)
+    check_env()
     
     
     
