@@ -8,142 +8,124 @@ Created on Wed Mar  6 20:48:36 2019
 
 #!/bin/env python3
 import subprocess
-import numpy as np
-import matplotlib.pyplot as plt
 import yaml
 import pickle
 import os
+import re
+from pprint import pprint
+import numpy as np
 
+sha = "ed18ea0b8bc99596a06c58a90d46ef8a30cda6a2"
+filename = "../py_data.pkl"
+foldername = "experiment01"
+test = False
 
+def load_data():
+    if os.path.exists(filename):
+        with open(filename, "rb") as file:
+            data = pickle.load(file)
+            print("Loaded data with {} entries".format(len(data)))
+            return data
+    print("New data")
+    data = {}
+    return data
 
-def layer_perf():
-    m = 2
-    #nthreads = np.arange(1, 9)
-    nthreads = np.array([4])
-    means = np.zeros(nthreads.shape, dtype=np.float)
-    std = np.zeros(nthreads.shape, dtype=np.float)
-    times = np.zeros((m,), dtype=np.float)
-
-    for i, nthread in enumerate(nthreads):
-        print(nthread, end=": ")
-        for j in range(m):
-            p = subprocess.Popen("./test_layer_perf {:d}".format(nthread), shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-            lines = [x.decode('ascii').rstrip() for x in p.stdout.readlines()]
-            p.wait()
-            times[j] = float(lines[0])
-            print(times[j], end=" ")
+def save_data(data):
+    print("Save data")
+    with open(filename, "wb") as file:
+        pickle.dump(data, file)
         
-        print("")
-        means[i] = np.mean(times)
-        std[i] = np.std(times)
+def write_batch(N, n, mode):
+    lines = list()
+    lines.append("#!/bin/bash")
+    if N is not None:
+        lines.append("#SBATCH -N {}".format(N))
+    if n is not None:
+        lines.append("#SBATCH -n {}".format(n))
         
-    return nthreads, means, std
-
-
-def main_scaling():
-    m = 2
+    modes = ("sync", "rma", "async")
+    if not (mode in modes):
+        raise ValueError("Mode must be in {}".format(modes))
+    lines.append("mpirun ./main py_config.yaml {}".format(mode))
     
-    
-    print("=== Configs ===")
-    for mode in modes:
-        print("{}: {}".format(mode, configs[mode]))
-    print("===============")
-    N = np.array([1, 2, 4, 5, 8, 10])
-    #N = np.array([1, 5])
-    res = dict()
-    res["N"] = N
-    res['modes'] = modes
-
-    for mode in modes:
-        print(mode)
-        res[mode] = dict()
-        res[mode]["means"] = np.zeros(N.shape, dtype=np.float)
-        res[mode]["std"]   = np.zeros(N.shape, dtype=np.float)
-        with open("config.yaml", "w") as file:
-            yaml.dump(configs[mode], file, default_flow_style=False)
-        
-        for i, n in enumerate(N):
-            times = np.zeros((m,), dtype=np.float)
-            print("\t{}: ".format(n), end="")
-            for j in range(m):
-                s = "salloc -N {:d} -n {:d} mpirun ./main config.yaml {}".format(n, n, mode)
-                p = subprocess.Popen(s, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-                p.wait()
-                lines = [x.decode('ascii').rstrip() for x in p.stdout.readlines()]
-                times[j] = float(lines[1])
-                print(times[j], end=" ")
-                
-            res[mode]["means"][i] = np.mean(times)
-            res[mode]["std"][i] = np.std(times)
-            print("")
-            
-    
-
-    return res
-
-
-def main_scaling_particles_cycle():
-    m = 2
-    modes = ["sync", "async", "rma"]
-    with open("../config.yaml", "r") as file:
-        config = yaml.load(file)
-    configs = dict()
-    for mode in modes:
-        configs[mode] = config.copy()
-    
-    N = np.array([100, 1000, 5000, 10000, 25000, 50000, 65000])
-    #N = np.array([1, 5])
-    res = dict()
-    res["N"] = N
-    res['modes'] = modes
-
-    for mode in modes:
-        print(mode)
-        res[mode] = dict()
-        res[mode]["means"] = np.zeros(N.shape, dtype=np.float)
-        res[mode]["std"]   = np.zeros(N.shape, dtype=np.float)
-        
-        
-        for i, n in enumerate(N):
-            configs[mode]['nb_particles_per_cycle'] = int(n)
-            with open("config.yaml", "w") as file:
-                yaml.dump(configs[mode], file, default_flow_style=False)
-            
-            times = np.zeros((m,), dtype=np.float)
-            print("\t{}: ".format(n), end="")
-            for j in range(m):
-                s = "salloc -N 5 -n 5 mpirun ./main config.yaml {}".format(mode)
-                p = subprocess.Popen(s, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-                p.wait()
-                lines = [x.decode('ascii').rstrip() for x in p.stdout.readlines()]
-                times[j] = float(lines[1])
-                print(times[j], end=" ")
-                
-            res[mode]["means"][i] = np.mean(times)
-            res[mode]["std"][i] = np.std(times)
-            print("")
-            
-    return res
-
-
-if __name__ == "__main__":
-    os.chdir("../build")
-    
-    modes = ["sync", "async", "rma"]
-    with open("../config.yaml", "r") as file:
-        config = yaml.load(file)
-    configs = dict()
-    for mode in modes:
-        configs[mode] = config.copy()
-    configs['sync']['nb_particles_per_cycle'] = 100000
-    configs['async']['nb_particles_per_cycle'] = 1000
-    configs['rma']['nb_particles_per_cycle'] = 65000
-    
-    print(config)
-    lines = ["#!/bin/bash", "#SBATCH -n 5", "SBATCH -N 5", "mpirun ./main ../config.yaml sync"]
     with open("py_run.batch", "w") as file:
         for line in lines:
             print(line, file=file)
+            
+def write_config(mode, nb_particles = 1000000, nthread=-1):
+    nb_particles_per_cycle = {
+        'sync': 100000,
+        'async': 500,
+        'rma': 65000    
+    }
+    
+    config = {
+            'x_min': 0.0,
+            'x_max': 1.0,
+            'x_ini': 0.7071067690849304,
+            'nb_cells': 1000,
+            'nb_particles': int(nb_particles),
+            'particle_min_weight': 1e-12,
+            'cycle_time': 1e-5,
+            'statistics_cycle_time': 0.1,
+            'nthread': nthread
+            }
+    modes = ("sync", "rma", "async")
+    if not (mode in modes):
+        raise ValueError("Mode must be in {}".format(modes))
+    config['nb_particles_per_cycle'] = nb_particles_per_cycle[mode]
+    
+    with open("py_config.yaml", "w") as file:
+        yaml.dump(config, file, default_flow_style=False)
+        
+def sbatch(test=True):
+    if test:
+        with open("py_run.batch", 'r') as file:
+            print(file.read())
+        with open("py_config.yaml", 'r') as file:
+            pprint(yaml.load(file))
+        return None
+    
+    p = subprocess.Popen("sbatch py_run.batch", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    p.wait()
+    lines = [x.decode('ascii').rstrip() for x in p.stdout.readlines()]
+    for line in lines:
+        print(line)
+    exp = re.compile("Submitted batch job (\d+)")
+    res = re.match(exp, lines[0])
+    if res is None:
+        raise ValueError("Could not match job")
+    return int(res.group(1))
+    
+    
+
+if __name__ == "__main__":
+    os.chdir("../{}".format(foldername))
+    
+    data = load_data()
+    pprint(data)
+    
+    nthread = 1
+    nb_particles = int(1e8)
+    
+    ns = np.array([1, 2, 4, 8, 16, 32, 64, 80])
+    Ns = np.ceil(ns/8).astype(np.int)
+    modes = ("sync", "rma", "async")
+    
+    
+    for n, N in zip(ns, Ns):
+        for mode in modes:
+            write_config(mode=mode, nb_particles=nb_particles, nthread=nthread)
+            write_batch(N=N, n=n, mode=mode)
+    
+            job_id = sbatch(test=test)
+            if job_id is not None:
+                data[job_id] = {'N': N, 'n': n, 'mode': mode, 'nb_particles': nb_particles, 'foldername': foldername, 'sha': sha}
+                pprint(data)
+            save_data(data)
+    
+            
+    save_data(data)
     
     
     
