@@ -36,7 +36,6 @@ Worker::Worker(int world_rank, const MCMPIOptions &options)
 void Worker::dump()
 {
 
-  printf("Calling dump %d/%d\n", world_rank, options.world_size);
   int total_len = 0;
   int *displs = NULL;
   real_t *weights = NULL;
@@ -64,6 +63,7 @@ void Worker::dump()
 void Worker::write_file(char *filename)
 {
   // write times
+
   size_t max_len = static_cast<size_t>(Timer::State::sprintf_max_len()) *
                        (timer_states.size() + 1) +
                    static_cast<size_t>(Stats::State::sprintf_max_len()) *
@@ -119,14 +119,65 @@ void Worker::write_file(char *filename)
   }
 
   // Write to collective file
-  MPI_File file;
-  MPI_File_open(MPI_COMM_WORLD, filename, MPI_MODE_WRONLY | MPI_MODE_CREATE,
-                MPI_INFO_NULL, &file);
+  // Does not seem to work, maybe the filesystem does not support it
+  // MPI_File file;
+  // int ret_open = MPI_File_open(MPI_COMM_WORLD, filename, MPI_MODE_WRONLY | MPI_MODE_CREATE,
+  //                              MPI_INFO_NULL, &file);
 
-  MPI_File_write_at_all(file, displs[world_rank], buf, offset, MPI_CHAR,
-                        MPI_STATUS_IGNORE);
+  // MPI_File_set_size(file, 0);
+  // MPI_Offset mpi_offset = displs[world_rank];
 
-  MPI_File_close(&file);
+  // MPI_Status status;
+  // int ret_write = MPI_File_write_at_all(file, mpi_offset, buf, offset, MPI_CHAR,
+  //                                       &status);
+
+  // int count;
+  // MPI_Get_count(&status, MPI_CHAR, &count);
+
+  // if (count != (int)offset)
+  // {
+  //   fprintf(stderr, "Abort in Worker::write_file. Number of char written not correct.");
+  //   MPI_Abort(MPI_COMM_WORLD, 1);
+  // }
+
+  // MPI_Barrier(MPI_COMM_WORLD);
+  // usleep(10000 * world_rank);
+
+  // printf("r = %d, displ = %d, offset = %d, ret_open = %d, ret_write = %d, bytes_written = %d, strlen = %zu\n",
+  //        world_rank, displs[world_rank], offset, ret_open, ret_write, count, strlen(buf));
+  // // printf("%s\n", buf);
+  // MPI_File_close(&file);
+  // MPI_Barrier(MPI_COMM_WORLD);
+
+  char *totalstring = NULL;
+  if (world_rank == 0)
+  {
+    totalstring = (char *)malloc(sizeof(char) * totlen);
+    totalstring[totlen - 1] = 0;
+  }
+
+  MPI_Gatherv(buf, offset, MPI_CHAR,
+              totalstring, recvcounts, displs, MPI_CHAR,
+              0, MPI_COMM_WORLD);
+
+  if (world_rank == 0)
+  {
+    // printf("%c\n", totalstring[totlen - 1]);
+    // printf("%s\n\n", totalstring);
+    // printf("%d ; %zu\n", totlen, strlen(totalstring));
+
+    FILE *file = fopen(filename, "w");
+
+    int results = fputs(totalstring, file);
+    if (results == EOF)
+    {
+      fprintf(stderr, "Abort in Worker::write_file. Couldn't write file.");
+      MPI_Abort(MPI_COMM_WORLD, 1);
+    }
+    fclose(file);
+  }
+
+  MPI_Barrier(MPI_COMM_WORLD);
 }
 
 void Worker::gather_weights_absorbed(int *total_len, int **displs,
