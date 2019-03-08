@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Wed Mar  6 20:48:36 2019
+Created on Thu Mar  7 18:29:29 2019
 
 @author: lukas.koestler
 """
 
-#!/bin/env python3
 import subprocess
 import yaml
 import pickle
@@ -14,11 +13,13 @@ import os
 import re
 from pprint import pprint
 import numpy as np
+import matplotlib.pyplot as plt
 
 sha = "fc03906c5ae795e1450254408bee710ac1deee78"
 filename = "../py_data.pkl"
 foldername = "experiment01"
 test = False
+m = 1
 
 def load_data():
     if os.path.exists(filename):
@@ -97,41 +98,78 @@ def sbatch(test=True):
         raise ValueError("Could not match job")
     return int(res.group(1))
     
+def get_times(ids):
+    times = np.empty((len(ids, )), dtype=np.float)
+    times[:] = np.nan
+    pattern = re.compile("^\d+.\d+$")
+    for index, i in enumerate(ids):
+        if os.path.exists("slurm-{}.out".format(i)):
+            with open("slurm-{}.out".format(i), 'r') as file:
+                lines = [x.rstrip() for x in file.readlines()]
+            for line in lines:
+                res = re.match(pattern, line)
+                if res:
+                    times[index] = float(line)
+    return times
 
-def check_env():
-    p = subprocess.Popen("which mpirun", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    p.wait()
-    lines = [x.decode('ascii').rstrip() for x in p.stdout.readlines()]
-    assert lines[0] == "/users/profs/2017/francois.trahay/soft/install/openmpi/bin/mpirun", "Not running correct environment. source set_env.sh?"
+def extract_data(data, sha):
+    new_data = dict()
+    for job_id in data.keys():
+        if data[job_id].get('sha') == sha:
+            new_data[job_id] = data[job_id].copy()
+    return new_data
 
-
-if __name__ == "__main__":
-    os.chdir("../{}".format(foldername))
-    check_env()
-    
-    data = load_data()
-    pprint(data)
-    
-    nthread = 1
-    nb_particles = int(1e8)
-    
+def plot_data(data):
     ns = np.array([1, 2, 4, 8, 16, 32, 64, 80])
     Ns = np.ceil(ns/8).astype(np.int)
     modes = ("sync", "rma", "async")
+    times = dict()
     
+    for mode in modes:
+        times[mode] = np.empty((ns.size, ), dtype=np.float)
+        times[mode][:] = np.nan
+        for i in range(ns.size):
+            _d = [d['time'] for d in data.values() if (d['sha'] == sha and d['mode'] == mode and d['n'] == ns[i] and d['N'] == Ns[i])]
+            assert len(_d) == m, "Found not exactly {} time".format(m)
+            times[mode][i] = np.median(np.array(_d))
     
-    for n, N in zip(ns, Ns):
-        for mode in modes:
-            write_config(mode=mode, nb_particles=nb_particles, nthread=nthread)
-            write_batch(N=N, n=n, mode=mode)
+    plt.figure()
+    for mode in modes:
+        plt.plot(ns, times[mode], '+-', label=mode)
+    plt.legend()
+    plt.show()
     
-            job_id = sbatch(test=test)
-            if job_id is not None:
-                data[job_id] = {'N': N, 'n': n, 'mode': mode, 'nb_particles': nb_particles, 'foldername': foldername, 'sha': sha}
-            save_data(data)
+    t_ref = 2700.0
+    rs = dict()
+    for mode in modes:
+        rs[mode] = (t_ref / times[mode]) / (ns/1)
     
+    plt.figure()
+    for mode in modes:
+        plt.semilogy(ns, rs[mode], '+-', label=mode)
+    plt.legend()
+    plt.show()
             
+
+if __name__ == "__main__":
+    os.chdir("../{}".format(foldername))
+    
+    data = load_data()
+    ids = sorted([x for x in data.keys() if (data[x]['foldername'] == foldername and data[x]['sha'] == sha)])
+    pprint(data)
+    pprint(ids)
+    times = get_times(ids)
+    
+    for i, time in zip(ids, times):
+        if not np.isnan(time):
+            if 'time' not in data[i]:
+                data[i]['time'] = time
+    
+    plot_data(data)
     save_data(data)
+    
+    
+    
     
     
     

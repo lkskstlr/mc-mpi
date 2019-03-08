@@ -34,7 +34,7 @@ Layer decompose_domain(real_t x_min, real_t x_max, real_t x_ini, int world_size,
   if ((cell_ini >= start_index) && (cell_ini < start_index + nb_my_cells))
   {
     seed_t seed = 5127801;
-    printf("Particles created in %d\n", world_rank);
+    // printf("Particles created in %d\n", world_rank);
     layer.create_particles(x_ini, 1.0 / nb_particles, nb_particles, seed);
   }
 

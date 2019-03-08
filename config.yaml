@@ -3,8 +3,8 @@ x_max: 1.000000000000000000e+00
 x_ini: 7.071067690849304199e-01
 particle_min_weight: 9.999999960041972003e-13
 nb_cells: 1000
-nb_particles: 10000
+nb_particles: 100000
 cycle_time: 1.e-05
-nb_particles_per_cycle: 100000
-nthread: -1
+nb_particles_per_cycle: 500
+nthread: 1
 statistics_cycle_time: 1.e-1

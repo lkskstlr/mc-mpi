@@ -5,21 +5,24 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-slurm_job_id = 37328
+slurm_job_id = 37559
 folderpath = "out/{}/".format(slurm_job_id)
 
-data = dict()
-data['df_w'] = pd.read_csv(folderpath+"weights.csv", skipinitialspace=True)
-data['data_w'] = np.genfromtxt('tex/data/WA_1000_1000000.out', delimiter=' ')
-
-df_w = data['df_w']
-data_w = data['data_w']
-plt.figure(figsize=(10,10))
-plt.plot(df_w['x'], df_w['weight'], '+-', label="parallel")
-plt.plot(data_w[:, 0], data_w[:, 1], 'm--.', label="sequential (reference)")
-plt.title("Weights after Simulation")
-plt.legend()
-plt.show()
+try:
+    data = dict()
+    data['df_w'] = pd.read_csv(folderpath+"weights.csv", skipinitialspace=True)
+    data['data_w'] = np.genfromtxt('tex/data/WA_1000_1000000.out', delimiter=' ')
+    
+    df_w = data['df_w']
+    data_w = data['data_w']
+    plt.figure(figsize=(10,10))
+    plt.plot(df_w['x'], df_w['weight'], '+-', label="parallel")
+    plt.plot(data_w[:, 0], data_w[:, 1], 'm--.', label="sequential (reference)")
+    plt.title("Weights after Simulation")
+    plt.legend()
+    plt.show()
+except:
+    print("Couldn't do weights")
 
 stats = pd.read_csv(folderpath+"stats.csv", skipinitialspace=True)
 stats = stats.loc[:, ~stats.columns.str.contains('^Unnamed')]

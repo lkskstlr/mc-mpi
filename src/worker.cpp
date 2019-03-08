@@ -35,6 +35,8 @@ Worker::Worker(int world_rank, const MCMPIOptions &options)
 
 void Worker::dump()
 {
+
+  printf("Calling dump %d/%d\n", world_rank, options.world_size);
   int total_len = 0;
   int *displs = NULL;
   real_t *weights = NULL;
