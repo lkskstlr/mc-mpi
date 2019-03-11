@@ -53,7 +53,7 @@ public:
    *
    * \return void
    */
-  void simulate(int nb_particles, int nthread = -1);
+  void simulate(int nb_particles, int nthread = -1, bool use_gpu = false);
 
   /*!
    * \function dump_WA
@@ -78,7 +78,7 @@ public:
                         std::vector<real_t> &weights_absorbed_local);
   int particle_step(Particle &particle,
                     std::vector<real_t> &weights_absorbed_local);
-  void simulate_helper(int nb_particles, int nthread);
+  void simulate_helper(int nb_particles, int nthread, bool use_gpu);
 
   // -- Data --
   real_t x_min, x_max;
@@ -105,6 +105,6 @@ public:
 };
 
 Layer decompose_domain(real_t x_min, real_t x_max, real_t x_ini, int world_size,
-                       int world_rank, int cells_per_layer, int nb_particles,
+                       int world_rank, int nb_cells, int nb_particles,
                        real_t particle_min_weight);
 #endif

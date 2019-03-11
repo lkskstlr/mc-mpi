@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
 project(mc-mpi C CXX)
 
+cmake_policy(SET CMP0074 NEW)
+
 option(CUDA_ENABLED "Build and test with CUDA support." OFF)
 
 
@@ -9,7 +11,11 @@ if(CUDA_ENABLED)
   message(STATUS "CUDA enabled")
   # Finding suitable compiler for nvcc -ccbin
   if(NOT DEFINED ENV{CUDAHOSTCXX})
-    find_program(CUDAGCC g++-4.8)
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL 4.8.5)
+      set(CUDAGCC ${CMAKE_CXX_COMPILER})
+    elseif()
+      find_program(CUDAGCC g++-4.8)
+    endif()
     if(NOT CUDAGCC)
       message(WARNING "Environment variable CUDAHOSTCXX was not set and g++-4.8 was not found. Probably nvcc will not work with standard g++.")
     else()
@@ -32,9 +38,17 @@ RelWithDebInfo MinSizeRel."
 endif(NOT CMAKE_BUILD_TYPE)
 
 ########## Global Compile Flags ##########
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror")
-#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Werror -pedantic")
-
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+  if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 4.9)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror -pedantic")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Werror -pedantic")
+  else()
+    message(STATUS "Old compiler version. Compiling without -Wall -Werror -pedantic")
+  endif()
+else()
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror -pedantic")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Werror -pedantic")
+endif()
 
 ########## Required Packages ##########
 find_package(OpenMP REQUIRED)
@@ -53,7 +67,7 @@ endif()
 
 
 ########## Libraries ##########
-add_library(yaml SHARED
+add_library(yaml STATIC
   src/yaml_loader.cpp
   src/yaml_dumper.cpp
 )
@@ -65,7 +79,7 @@ set_target_properties(yaml PROPERTIES
 )
 
 
-add_library(timer SHARED
+add_library(timer STATIC
   src/timer.cpp
 )
 target_include_directories(timer PUBLIC include/timer)
@@ -84,14 +98,38 @@ target_include_directories(types INTERFACE include/types)
 target_compile_features(types INTERFACE cxx_std_11)
 
 
-add_library(random SHARED src/random.cpp)
+add_library(random STATIC src/random.cpp)
 target_include_directories(random PUBLIC include/random)
 target_link_libraries(random
   PUBLIC types
 )
 
 
-add_library(layer SHARED src/layer.cpp)
+if(CUDA_ENABLED)
+  add_library(gpu_errcheck INTERFACE)
+  target_include_directories(gpu_errcheck INTERFACE include/gpu_errcheck)
+
+
+  add_library(curandom STATIC src/curandom.cu)
+  target_include_directories(curandom PUBLIC include/curandom)
+  target_compile_features(curandom PRIVATE cxx_std_11)
+  set_target_properties(curandom PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+  target_link_libraries(curandom
+    PUBLIC types
+  )
+
+
+  add_library(culayer STATIC src/culayer.cu src/culayer_kernel.cu)
+  target_include_directories(culayer PUBLIC include/culayer)
+  target_compile_features(culayer PRIVATE cxx_std_11)
+  set_target_properties(culayer PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+  target_link_libraries(culayer
+    PUBLIC types gpu_errcheck
+  )
+endif(CUDA_ENABLED)
+
+
+add_library(layer STATIC src/layer.cpp)
 target_include_directories(layer PUBLIC include/layer)
 set_target_properties(layer PROPERTIES
   CXX_STANDARD 11
@@ -102,9 +140,15 @@ target_link_libraries(layer
   PUBLIC types
   PRIVATE random OpenMP::OpenMP_CXX
 )
+if(CUDA_ENABLED)
+  target_compile_definitions(layer PUBLIC -DCUDA_ENABLED)
+  target_link_libraries(layer
+  PRIVATE culayer
+  )
+endif()
 
 
-add_library(comm SHARED
+add_library(comm STATIC
   src/stats.cpp
   src/async_comm-impl.cpp
   src/async_comm.cpp
@@ -124,13 +168,23 @@ target_link_libraries(comm
   PUBLIC types MPI::MPI_C
 )
 
-add_library(mcmpi SHARED
+add_library(mcmpi STATIC
   src/worker.cpp
   src/worker_sync.cpp
   src/worker_async.cpp
   src/worker_rma.cpp
 )
-# target_compile_features(mcmpi PUBLIC cxx_lambda_init_captures)
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+  if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 4.9)
+    target_compile_features(mcmpi PUBLIC cxx_lambda_init_captures)
+  elseif(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 4.8.4)
+    #This actually work
+  else()
+    message(WARNING "The compiler version is ${CMAKE_CXX_COMPILER_VERSION} and it might not support init captures.")
+  endif()
+else()
+  target_compile_features(mcmpi PUBLIC cxx_lambda_init_captures)
+endif()
 target_include_directories(mcmpi PUBLIC include/mcmpi)
 set_target_properties(mcmpi PROPERTIES
   CXX_STANDARD 11
@@ -142,32 +196,11 @@ target_link_libraries(mcmpi
   PRIVATE yaml
 )
 
-if(CUDA_ENABLED)
-  add_library(gpu_errcheck INTERFACE)
-  target_include_directories(gpu_errcheck INTERFACE include/gpu_errcheck)
-
-
-  add_library(curandom STATIC src/curandom.cu)
-  target_include_directories(curandom PUBLIC include/curandom)
-  target_compile_features(curandom PRIVATE cxx_std_11)
-  set_target_properties(curandom PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
-  target_link_libraries(curandom
-    PUBLIC types
-  )
-
-
-  add_library(culayer STATIC src/culayer.cu)
-  target_include_directories(culayer PUBLIC include/culayer)
-  target_compile_features(culayer PRIVATE cxx_std_11)
-  set_target_properties(culayer PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
-  target_link_libraries(culayer
-    PUBLIC types
-  )
-endif(CUDA_ENABLED)
 
 ########## Scripts ##########
 configure_file(scripts/save_run save_run COPYONLY)
 configure_file(scripts/run.batch run.batch COPYONLY)
+configure_file(scripts/run.py run.py COPYONLY)
 
 
 
@@ -306,4 +339,7 @@ if(CUDA_ENABLED)
 
   add_test(NAME TestCudaRandom COMMAND ./test_curandom)
   set_tests_properties(TestRmaSerialization PROPERTIES TIMEOUT 20)
+
+  add_test(NAME TestCuLayer COMMAND ./test_culayer)
+  set_tests_properties(TestCuLayer PROPERTIES TIMEOUT 20)
 endif(CUDA_ENABLED)

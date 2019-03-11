@@ -3,6 +3,8 @@ eze.py
 lukas.py
 docs/
 build/
+out/
+experiment*/
 graveyard/
 sequential/
 releases/

@@ -88,7 +88,7 @@ int main(int argc, char **argv)
   worker->spin();
   MPI_Barrier(MPI_COMM_WORLD);
   if (world_rank == 0)
-    printf("Time = %lf\n", MPI_Wtime() - starttime);
+    printf("%lf\n", MPI_Wtime() - starttime);
   worker->dump();
 
   MPI_Finalize();

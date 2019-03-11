@@ -5,7 +5,7 @@
 
 WorkerAsync::WorkerAsync(int world_rank, MCMPIOptions &options)
     : Worker(world_rank, options),
-      particle_comm(world_rank, options.buffer_size),
+      particle_comm(world_rank, 1000000000),
       state_comm(options.world_size, world_rank, MCMPIOptions::Tag::State,
                  [nb_particles = options.nb_particles](std::vector<int> msgs) {
                    int sum = std::accumulate(msgs.begin(), msgs.end(), 0);
@@ -19,6 +19,7 @@ WorkerAsync::WorkerAsync(int world_rank, MCMPIOptions &options)
 void WorkerAsync::spin()
 {
   using std::chrono::high_resolution_clock;
+
   auto timestamp = timer.start(Timer::Tag::Idle);
 
   int nb_cycles_stats = 0;
@@ -80,6 +81,8 @@ void WorkerAsync::spin()
     /* Idle */
     timer.change(timestamp, Timer::Tag::Idle);
     {
+      particle_comm.free();
+      state_comm.free();
       std::chrono::duration<double, std::milli> elapsed = high_resolution_clock::now() - start;
       if (elapsed.count() < options.cycle_time * 1e3)
       {

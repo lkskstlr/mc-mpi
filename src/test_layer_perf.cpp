@@ -5,7 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-int main(int argc, char const *argv[]) {
+int main(int argc, char const *argv[])
+{
   using std::chrono::high_resolution_clock;
 
   int nthread = argc == 1 ? -1 : atoi(argv[1]);
@@ -30,6 +31,6 @@ int main(int argc, char const *argv[]) {
   layer.dump_WA();
 
   std::chrono::duration<double, std::milli> elapsed = finish - start;
-  printf("Time = %f s\n", elapsed.count() / 1e3);
+  printf("%f\n", elapsed.count() / 1e3);
   return 0;
 }

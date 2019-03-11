@@ -5,9 +5,15 @@
 #include <functional>
 #include <vector>
 
-class StateComm : private AsyncComm<int> {
+class StateComm : public AsyncComm<int>
+{
 public:
-  enum State : int { Running = 0, Finished, STATE_COUNT };
+  enum State : int
+  {
+    Running = 0,
+    Finished,
+    STATE_COUNT
+  };
 
   StateComm(int world_size, int world_rank, int tag,
             std::function<State(std::vector<int>)> state_lambda,
