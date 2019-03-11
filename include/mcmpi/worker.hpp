@@ -32,7 +32,7 @@ public:
    * \param[in] world_rank mpi world_rank of the processor
    * \param[in] MCMPIOptions global options
    */
-  Worker(int world_rank, const MCMPIOptions &options);
+  Worker(int world_rank, MCMPIOptions &options);
 
   /*!
    * \function spin
@@ -61,7 +61,7 @@ public:
 
   // private:
   const int world_rank;
-  const MCMPIOptions options;
+  MCMPIOptions options;
   Layer layer;
 
   Timer timer;

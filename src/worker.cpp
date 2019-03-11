@@ -12,23 +12,125 @@
 #include <thread>
 #include <time.h>
 #include <unistd.h>
+#include <math.h>
 
-float get_power()
+#define WORKER_MPI_DECOMPOSE_DOMAIN_PRINT 0
+#define WORKER_MPI_DECOMPOSE_DOMAIN_DIFFERENT_THREADS 0
+
+float get_power(int nthread)
 {
-  return 1;
+  using std::chrono::high_resolution_clock;
+
+  constexpr real_t x_min = 0.0;
+  constexpr real_t x_max = 1.0;
+  const real_t x_ini = sqrtf(2.0) / 2.0;
+  constexpr int world_size = 1;
+  constexpr int world_rank = 0;
+  constexpr int nb_cells_per_layer = 1000;
+  constexpr int nb_particles = 100000;
+  constexpr real_t particle_min_weight = 0.0;
+
+  Layer layer(decompose_domain(x_min, x_max, x_ini, world_size, world_rank,
+                               nb_cells_per_layer, nb_particles,
+                               particle_min_weight));
+
+  auto start = high_resolution_clock::now();
+  layer.simulate(-1, nthread);
+  auto finish = high_resolution_clock::now();
+
+  std::chrono::duration<double, std::milli> elapsed = finish - start;
+  return 10000 / elapsed.count();
 }
 
-Layer mpi_decompose_domain(MCMPIOptions const &options)
+Layer mpi_decompose_domain(MCMPIOptions &options)
 {
-  //MPI_Status status;
 
   int my_rank, world_size;
 
   float r_min, r_max;
-  int cell_min, cell_max;
+  int cell_min = 0, cell_max = 0;
 
   int nb_cells = 1000;
   int cell_weights[1000];
+  /*
+  int cell_weights[1000] = {42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42,
+                            43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43,
+                            43, 43, 43, 43, 43, 43, 43, 43, 43, 44, 44, 44, 44,
+                            44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44,
+                            44, 44, 44, 44, 44, 44, 44, 45, 45, 45, 45, 45, 45,
+                            45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45,
+                            45, 45, 45, 45, 46, 46, 46, 46, 46, 46, 46, 46, 46,
+                            46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46,
+                            46, 46, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47,
+                            47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47,
+                            47, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48,
+                            48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48,
+                            49, 49, 49, 49, 49, 49, 49, 49, 49, 49, 49, 49, 49,
+                            49, 49, 49, 49, 49, 49, 49, 49, 49, 49, 49, 49, 50,
+                            50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50,
+                            50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 51, 51,
+                            51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51,
+                            51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 52, 52,
+                            52, 52, 52, 52, 52, 52, 52, 52, 52, 52, 52, 52, 52,
+                            52, 52, 52, 52, 52, 52, 52, 52, 52, 52, 52, 52, 53,
+                            53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53,
+                            53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 54,
+                            54, 54, 54, 54, 54, 54, 54, 54, 54, 54, 54, 54, 54,
+                            54, 54, 54, 54, 54, 54, 54, 54, 54, 54, 54, 54, 54,
+                            55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55,
+                            55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55,
+                            55, 56, 56, 56, 56, 56, 56, 56, 56, 56, 56, 56, 56,
+                            56, 56, 56, 56, 56, 56, 56, 56, 56, 56, 56, 56, 56,
+                            56, 56, 56, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57,
+                            57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57,
+                            57, 57, 57, 57, 58, 58, 58, 58, 58, 58, 58, 58, 58,
+                            58, 58, 58, 58, 58, 58, 58, 58, 58, 58, 58, 58, 58,
+                            58, 58, 58, 58, 58, 59, 59, 59, 59, 59, 59, 59, 59,
+                            59, 59, 59, 59, 59, 59, 59, 59, 59, 59, 59, 59, 59,
+                            59, 59, 59, 59, 59, 59, 60, 60, 60, 60, 60, 60, 60,
+                            60, 60, 60, 60, 60, 60, 60, 60, 60, 60, 60, 60, 60,
+                            60, 60, 60, 60, 60, 60, 60, 60, 61, 61, 61, 61, 61,
+                            61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61,
+                            61, 61, 61, 61, 61, 61, 61, 61, 62, 62, 62, 62, 62,
+                            62, 62, 62, 62, 62, 62, 62, 62, 62, 62, 62, 62, 62,
+                            62, 62, 62, 62, 62, 62, 62, 62, 62, 63, 63, 63, 63,
+                            63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63,
+                            63, 63, 63, 63, 63, 63, 63, 63, 63, 64, 64, 64, 64,
+                            64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64,
+                            64, 64, 64, 64, 64, 64, 64, 64, 64, 65, 65, 65, 65,
+                            65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65,
+                            65, 65, 65, 65, 65, 65, 65, 65, 66, 66, 66, 66, 66,
+                            66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
+                            66, 66, 66, 66, 66, 66, 67, 67, 67, 67, 67, 67, 67,
+                            67, 67, 67, 67, 67, 67, 67, 67, 67, 67, 67, 67, 67,
+                            67, 67, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68,
+                            68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 69, 69, 69,
+                            69, 69, 69, 69, 69, 69, 69, 69, 69, 69, 69, 69, 69,
+                            69, 69, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70,
+                            70, 70, 70, 70, 71, 2000, 70, 70, 70, 70, 70, 70, 70,
+                            70, 70, 70, 70, 70, 70, 69, 69, 69, 69, 69, 69, 69,
+                            69, 69, 69, 69, 69, 69, 69, 69, 69, 68, 68, 68, 68,
+                            68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68,
+                            68, 67, 67, 67, 67, 67, 67, 67, 67, 67, 67, 67, 67,
+                            67, 67, 67, 67, 67, 67, 67, 67, 66, 66, 66, 66, 66,
+                            66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
+                            66, 66, 66, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65,
+                            65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65,
+                            64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64,
+                            64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 63, 63,
+                            63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63,
+                            63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 62, 62,
+                            62, 62, 62, 62, 62, 62, 62, 62, 62, 62, 62, 62, 62,
+                            62, 62, 62, 62, 62, 62, 62, 62, 62, 62, 62, 62, 62,
+                            61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61,
+                            61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61,
+                            61, 61, 61, 60, 60, 60, 60, 60, 60, 60, 60, 60, 60,
+                            60, 60, 60, 60, 60, 60, 60, 60, 60, 60, 60, 60, 60,
+                            60, 60, 60, 60, 60, 60, 60, 59, 59, 59, 59, 59, 59,
+                            59, 59, 59, 59, 59, 59, 59, 59, 59, 59, 59, 59, 59,
+                            59, 59, 59, 59, 59, 59, 59, 59, 59, 59, 59, 59, 59,
+                            58, 58, 58, 58, 58, 58, 58, 58, 58, 58, 58, 58};
+                            */
   int cell_weights_sum;
   int cell_weights_so_far;
 
@@ -44,35 +146,41 @@ Layer mpi_decompose_domain(MCMPIOptions const &options)
   MPI_Comm_size(MPI_COMM_WORLD, &world_size);
   MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
 
-  printf("[%d]Debugging\t\tWorld size: %d\t My rank: %d\n", my_rank, world_size, my_rank);
+  if (WORKER_MPI_DECOMPOSE_DOMAIN_DIFFERENT_THREADS)
+    options.nthread = (my_rank % 8) + 1;
+  else
+    options.nthread = -1;
 
+  int m_left = 41;
+  int m_right = 41;
+  int d = 2100;
+  int h = 71;
   //Hardcode cell weights and get the total sum
+  /*
+  cell_weights is a function according to the above parameters, m_left, m_right, d and h.
+  Left of cell 707 (initial cell for particles), the function is a straight line with slope
+  m_left and at cell 707 it should be h. To the right of cell 707 it is a straight line
+  with slope minus m_right which also should be h at cell 707. Cell 707's weight is d
+  (this represents a delta for the computation it takes to create a new particle)
+  */
   for (i = 0, cell_weights_sum = 0; i < nb_cells; i++)
   {
-    if (i != 707)
-      cell_weights[i] = 1;
+    if (i < 707)
+      cell_weights[i] = h - (int)(((float)(707 - i) / (float)1000) * m_left);
+    else if (i > 707)
+      cell_weights[i] = h - (int)(((float)(i - 707) / (float)1000) * m_right);
     else
-      cell_weights[i] = 100;
-
-    // cell_weights[i] = i;
+      cell_weights[i] = d;
 
     cell_weights_sum += cell_weights[i];
   }
 
-  printf("\n[%d]Debugging\t\tCells: %d\tCell weights sum: %d\n", my_rank, nb_cells, cell_weights_sum);
-
   //Get own computing power and allocate memory for all of the other ranks' computer power
-  computation_power_own = get_power();
+  computation_power_own = get_power(options.nthread);
   computation_power_all = (float *)malloc(world_size * sizeof(float));
 
   //All ranks communicate among themselves the computing power of each
   MPI_Allgather(&computation_power_own, 1, MPI_FLOAT, computation_power_all, 1, MPI_FLOAT, MPI_COMM_WORLD);
-
-  // printf("[%d]Debugging\t\tOwn computation power: %f\n", my_rank, computation_power_own);
-  // for (i = 0; i < world_size; i++)
-  // {
-  //   printf("[%d]Computation power rank %d: %f\n", my_rank, i, computation_power_all[i]);
-  // }
 
   //Get the sum of all compute powers
   for (i = 0, computation_power_all_sum = 0; i < world_size; i++)
@@ -82,13 +190,17 @@ Layer mpi_decompose_domain(MCMPIOptions const &options)
   for (i = 0, computation_power_so_far = 0; i < my_rank; i++)
     computation_power_so_far += computation_power_all[i];
 
+  //Calculate the minumum number of standarized work load
   r_min = (cell_weights_sum / computation_power_all_sum) * computation_power_so_far;
 
   //Get the addition of the compute powers so far, INCLUDING own's
   computation_power_so_far += computation_power_all[my_rank];
 
+  //Calculate the maximum number of standarized work load
   r_max = (cell_weights_sum / computation_power_all_sum) * computation_power_so_far;
 
+  //The starting cell for the domain is when enough cells before reach the minimum amount of standarized work load
+  //The ending cell is when the maximum amount of standarized work load is reached
   for (i = 0, cell_weights_so_far = 0, flag_min = 0, flag_max = 0; !(flag_min && flag_max); i++)
   {
     if (!flag_min && cell_weights_so_far >= r_min)
@@ -101,31 +213,57 @@ Layer mpi_decompose_domain(MCMPIOptions const &options)
       cell_max = i;
       flag_max = 1;
     }
+    if (i == nb_cells - 1)
+    {
+      cell_max = nb_cells;
+      flag_max = 1;
+    }
     cell_weights_so_far += cell_weights[i];
   }
 
   float x_min_layer = (float)cell_min / (float)nb_cells;
   float x_max_layer = (float)cell_max / (float)nb_cells;
 
+  //Create the domain and check to see if it is the one that generates the particles
   Layer layer(x_min_layer, x_max_layer, cell_min, cell_max - cell_min, options.particle_min_weight);
   if ((x_min_layer <= options.x_ini) && (options.x_ini < x_max_layer))
   {
-    printf("World rank: %d / %d\n", my_rank, world_size);
+    if (WORKER_MPI_DECOMPOSE_DOMAIN_PRINT)
+      printf("World rank: %d / %d\n", my_rank, world_size);
     seed_t seed = 5127801;
     layer.create_particles(options.x_ini, 1.0 / options.nb_particles, options.nb_particles, seed);
   }
+  int work_load = 0;
+  for (i = cell_min; i < cell_max; i++)
+  {
+    work_load += cell_weights[i];
+  }
 
-  MPI_Barrier(MPI_COMM_WORLD);
-  usleep(10000 * my_rank);
-  printf("[%d]r_min: %f\tr_max: %f\tx_min: %f\tx_max: %f\tcell_min: %d\tcell_max: %d\n", my_rank, r_min, r_max, layer.x_min, layer.x_max, cell_min, cell_max);
-  printf("[%d]Layer: index_start = %d, m = %d, x_min = %f, x_max = %f\n", my_rank, layer.index_start, layer.m, layer.x_min, layer.x_max);
-
+  if (WORKER_MPI_DECOMPOSE_DOMAIN_PRINT)
+  {
+    MPI_Barrier(MPI_COMM_WORLD);
+    usleep(20000 * my_rank);
+    if (my_rank == 0)
+    {
+      printf("\nDebugging\t\tCells: %d\tCell weights sum: %d\n", nb_cells, cell_weights_sum);
+      // for (i = 0; i < 1000; i += 10)
+      //   printf("Cell_weights[%d] = %d\n", i, cell_weights[i]);
+    }
+    printf("[%d]Computation power: %f\n", my_rank, computation_power_own);
+    printf("[%d]r_min: %f\tr_max: %f\tx_min: %f\tx_max: %f\tcell_min: %d\tcell_max: %d\n", my_rank, r_min, r_max, layer.x_min, layer.x_max, cell_min, cell_max);
+    printf("[%d]Layer: index_start = %d, m = %d, x_min = %f, x_max = %f\n", my_rank, layer.index_start, layer.m, layer.x_min, layer.x_max);
+    printf("[%d]Work load = %d\n", my_rank, work_load);
+  }
   return layer;
 }
 
-Worker::Worker(int world_rank, const MCMPIOptions &options)
+Worker::Worker(int world_rank, MCMPIOptions &options)
     : world_rank(world_rank), options(options), layer(mpi_decompose_domain(options)), timer()
 {
+  if (WORKER_MPI_DECOMPOSE_DOMAIN_DIFFERENT_THREADS)
+    options.nthread = (world_rank % 8) + 1;
+  else
+    options.nthread = -1;
 }
 
 void Worker::dump()

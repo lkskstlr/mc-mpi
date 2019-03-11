@@ -5,7 +5,8 @@
 #include "state_comm.hpp"
 #include "worker.hpp"
 
-class WorkerAsync : public Worker {
+class WorkerAsync : public Worker
+{
 public:
   /*!
    * \function Worker
@@ -15,7 +16,7 @@ public:
    * \param[in] world_rank mpi world_rank of the processor
    * \param[in] MCMPIOptions global options
    */
-  WorkerAsync(int world_rank, const MCMPIOptions &options);
+  WorkerAsync(int world_rank, MCMPIOptions &options);
 
   /*!
    * \function spin

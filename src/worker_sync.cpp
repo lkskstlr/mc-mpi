@@ -1,7 +1,7 @@
 #include "worker_sync.hpp"
 #include <stddef.h>
 
-WorkerSync::WorkerSync(int world_rank, const MCMPIOptions &options)
+WorkerSync::WorkerSync(int world_rank, MCMPIOptions &options)
     : Worker(world_rank, options)
 {
   constexpr int nitems = 5;

@@ -3,7 +3,8 @@
 
 #include "worker.hpp"
 
-class WorkerSync : public Worker {
+class WorkerSync : public Worker
+{
 public:
   /*!
    * \function Worker
@@ -13,7 +14,7 @@ public:
    * \param[in] world_rank mpi world_rank of the processor
    * \param[in] MCMPIOptions global options
    */
-  WorkerSync(int world_rank, const MCMPIOptions &options);
+  WorkerSync(int world_rank, MCMPIOptions &options);
 
   /*!
    * \function spin

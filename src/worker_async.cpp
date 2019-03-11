@@ -3,7 +3,7 @@
 #include <chrono>
 #include <thread>
 
-WorkerAsync::WorkerAsync(int world_rank, const MCMPIOptions &options)
+WorkerAsync::WorkerAsync(int world_rank, MCMPIOptions &options)
     : Worker(world_rank, options),
       particle_comm(world_rank, options.buffer_size),
       state_comm(options.world_size, world_rank, MCMPIOptions::Tag::State,

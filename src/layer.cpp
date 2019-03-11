@@ -141,7 +141,7 @@ int Layer::particle_step(Particle &particle,
   }
 
   real_t di_edge = MAXREAL;
-  if (particle.mu < -EPS_PRECISION || EPS_PRECISION < particle.mu)
+  if (particle.mu < -0.01 * EPS_PRECISION || 0.01 * EPS_PRECISION < particle.mu)
   {
     di_edge = (x_new_edge - particle.x) / particle.mu;
   }
