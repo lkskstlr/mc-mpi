@@ -37,6 +37,20 @@ void particle_sort(
       (*n_active)++;
     }
   }
+
+  // for (int i = 0; i < *n_active; i++){
+  //   if (particles_active[i].index < min_index || particles_active[i].index >= max_index){
+  //     printf("Error at i = %d, index = %d active particle is wrong\n", i, particles_active[i].index);
+  //     exit(1);
+  //   }
+  // }
+
+  // for (int i = 0; i < *n_inactive; i++){
+  //   if (particles_inactive[i].index >= min_index && particles_inactive[i].index < max_index){
+  //     printf("Error at i = %d, index = %d inactive particle is wrong\n", i, particles_inactive[i].index);
+  //     exit(1);
+  //   }
+  // }
 }
 void cusimulate(int n,
   Particle* particles,
@@ -56,6 +70,8 @@ void cusimulate(int n,
 
     Particle* particles_inactive = (Particle*) malloc(sizeof(Particle) * n);
     Particle* buffer = (Particle*) malloc(sizeof(Particle) * n);
+    Particle* const buffer_original = buffer;
+    Particle* const particles_original = particles;
 
     Particle* d_particles;
     gpu_errcheck( cudaMalloc((void**)&d_particles, sizeof(Particle) * n) );
@@ -70,6 +86,7 @@ void cusimulate(int n,
     gpu_errcheck( cudaMemcpy(d_weights_absorbed, weights_absorbed, sizeof(float) * n_cells, cudaMemcpyHostToDevice) );
 
     while(n_active > 0){
+      // printf("active = %d, inactive = %d\n", n_active, n_inactive);
       gpu_errcheck( cudaMemcpy(d_particles, particles, sizeof(Particle) * n_active, cudaMemcpyHostToDevice) );
 
       particle_step_kernel<<<DIV_UP(n_active, 256), 256, sizeof(float) * 3 * n_cells >>>(
@@ -85,8 +102,42 @@ void cusimulate(int n,
         particles = buffer;
         buffer = tmp_ptr;
       }
+
+      // for (int i = 0; i < n_inactive; i++){
+      //   printf("%d\n", particles_inactive[i].index);
+      // }
+
+      // for (int i = 0; i < n_active; i++){
+      //   if (particles[i].index < min_index || particles[i].index >= max_index){
+      //     printf("Error at i = %d, index = %d particles\n", i, particles[i].index);
+      //     exit(1);
+      //   }
+      // }
+    
+      // for (int i = 0; i < n_inactive; i++){
+      //   if (particles_inactive[i].index >= min_index && particles_inactive[i].index < max_index){
+      //     printf("Error at i = %d, index = %d particles_inactive\n", i, particles_inactive[i].index);
+      //     exit(1);
+      //   }
+      // }
+    }
+    // printf("%d\n", n_active);
+    
+    // printf("\n");
+    gpu_errcheck( cudaMemcpy(weights_absorbed, d_weights_absorbed, sizeof(float) * n_cells, cudaMemcpyDeviceToHost) );
+
+    if (n_inactive != n){
+      fprintf(stderr, "Should have inactivated all particles\n");
+    }
+    for (int i = 0; i < n_inactive; i++){
+      particles_original[i] = particles_inactive[i];
     }
 
-    // printf("\n");
-    gpu_errcheck( cudaMemcpy(weights_absorbed, d_weights_absorbed, sizeof(float) * n_cells, cudaMemcpyDeviceToHost) );    
+    cudaFree(d_sigs);
+    cudaFree(d_weights_absorbed);
+    cudaFree(d_absorption_rates);
+
+    free(particles_inactive);
+    free(buffer_original);
+    return;
   }

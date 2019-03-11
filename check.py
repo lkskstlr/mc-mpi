@@ -62,3 +62,7 @@ for proc in range(0, world_size):
 #plt.figure(figsize=(10,10))
 plt.tight_layout()
 plt.show()
+
+for proc in range(0, world_size):
+    X = stats[stats['rank'] == proc]
+    print(np.sum(X['time_comp'].values))    

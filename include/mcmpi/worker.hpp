@@ -57,6 +57,8 @@ public:
    *
    * \return real_t total absorbed weight
    */
+  bool use_gpu;
+
   std::vector<real_t> weights_absorbed();
 
   // private:
@@ -73,7 +75,7 @@ private:
   void write_file(char *filename);
   void gather_weights_absorbed(int *total_len, int **displs, real_t **weights);
   void mkdir_out();
-  void dump_config(char *filename);
+  void dump_config();
   void dump_weights_absorbed(int total_len, int const *displs,
                              real_t const *weights);
 

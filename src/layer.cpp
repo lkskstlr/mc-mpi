@@ -273,7 +273,8 @@ void Layer::simulate(int nb_particles, int nthread, bool use_gpu)
           nb_disabled++;
         else
         {
-          fprintf(stderr, "There was a particle which was not disabled nor transported");
+          fprintf(stderr, "There was a particle which was not disabled nor transported\n");
+          fprintf(stderr, "i = %d, wmc = %e, index = %d, index_start = %d, index_start+m = %d\n", i, particles[particles_size - i - 1].wmc, particles[particles_size - i - 1].index, index_start, index_start + m);
           exit(EXIT_FAILURE);
         }
       }

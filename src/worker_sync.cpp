@@ -35,7 +35,7 @@ void WorkerSync::spin()
     /* Simulate Particles */
     timer.change(timestamp, Timer::Tag::Computation);
     {
-      layer.simulate(options.nb_particles_per_cycle, options.nthread);
+      layer.simulate(options.nb_particles_per_cycle, options.nthread, use_gpu);
     }
 
     /* SendRecv Particles */

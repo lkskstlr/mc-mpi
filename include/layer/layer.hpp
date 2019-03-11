@@ -45,7 +45,7 @@ public:
    * \brief Simulates nb_particles until they leave the domain or become
    * inactive
    *
-   * \param[in] nb_particles Number of particles to simulate.
+   * \param[in] nb_particles Number of particles to simulampi_decompose_domainte.
    * Use -1 to simulate until all particles have left or became inactive.
    * \param[in] nthread Number of OpenMP threads to use, optional (default =
    * -1). If -1 is selected the OpenMP runtime decides, e.g. through

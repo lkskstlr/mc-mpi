@@ -6,6 +6,7 @@
 #include <dirent.h>
 #include <numeric>
 #include <stdio.h>
+#include <omp.h>
 #include <mpi.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -14,10 +15,89 @@
 #include <unistd.h>
 #include <math.h>
 
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+#define MAX(a, b) (((a) > (b)) ? (a) : (b))
+
 #define WORKER_MPI_DECOMPOSE_DOMAIN_PRINT 0
 #define WORKER_MPI_DECOMPOSE_DOMAIN_DIFFERENT_THREADS 0
 
-float get_power(int nthread)
+void MCMPI_Schedule(int local_size, int local_rank, int *number_threads_rank, int *gpu_enabled)
+{
+  //Get the number of total threads in the node
+  int number_threads_total = omp_get_num_procs();
+  //If there is only one process (rank) in the machine (local_size == 1), this rank should have as many
+  //threads as it can, and the gpu is enabled
+  if (local_size == 1)
+  {
+    *number_threads_rank = 1;
+    *gpu_enabled = 1;
+  }
+  //If the node has more than one process
+  else
+  {
+    //The first process gets the usage of the gpu and only one thread
+    if (local_rank == 0)
+    {
+      *number_threads_rank = 1;
+      *gpu_enabled = 1;
+    }
+    //The rest of the processes get the remaining threads as evenly divided as possible and no gpu
+    else
+    {
+      local_rank--;
+      local_size--;
+      number_threads_total--;
+      *number_threads_rank = (number_threads_total) / (local_size);
+      if (local_rank < (number_threads_total % local_size))
+        (*number_threads_rank)++;
+      *gpu_enabled = 0;
+    }
+  }
+}
+
+// From: http://www.cs.yorku.ca/~oz/hash.html
+unsigned long hash(unsigned char *str)
+{
+  unsigned long hash = 5381;
+  int c;
+
+  while (c = *str++)
+    hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
+
+  return hash;
+}
+
+void MCMPI_Local(int *const local_size, int *const local_rank)
+{
+  int world_rank;
+  int world_size;
+  MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+  MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
+
+  char hostname[2048] = {0};
+  gethostname(hostname, 2048);
+  unsigned long my_hash = hash((unsigned char *)hostname);
+  unsigned long *hashes = (unsigned long *)malloc(sizeof(unsigned long) * world_size);
+
+  MPI_Allgather(&my_hash, 1, MPI_UNSIGNED_LONG, hashes, 1, MPI_UNSIGNED_LONG, MPI_COMM_WORLD);
+
+  *local_size = 0;
+  *local_rank = 0;
+
+  for (int j = 0; j < world_size; j++)
+  {
+    if (hashes[j] == my_hash)
+    {
+      (*local_size)++;
+      if (j < world_rank)
+        (*local_rank)++;
+    }
+  }
+
+  free(hashes);
+}
+
+float get_power(int nthread, bool use_gpu)
 {
   using std::chrono::high_resolution_clock;
 
@@ -35,14 +115,14 @@ float get_power(int nthread)
                                particle_min_weight));
 
   auto start = high_resolution_clock::now();
-  layer.simulate(-1, nthread);
+  layer.simulate(-1, nthread, use_gpu);
   auto finish = high_resolution_clock::now();
 
   std::chrono::duration<double, std::milli> elapsed = finish - start;
   return 10000 / elapsed.count();
 }
 
-Layer mpi_decompose_domain(MCMPIOptions &options)
+Layer mpi_decompose_domain(MCMPIOptions &options, bool use_gpu)
 {
 
   int my_rank, world_size;
@@ -50,87 +130,15 @@ Layer mpi_decompose_domain(MCMPIOptions &options)
   float r_min, r_max;
   int cell_min = 0, cell_max = 0;
 
-  int nb_cells = 1000;
-  int cell_weights[1000];
-  /*
-  int cell_weights[1000] = {42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42,
-                            43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43,
-                            43, 43, 43, 43, 43, 43, 43, 43, 43, 44, 44, 44, 44,
-                            44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44,
-                            44, 44, 44, 44, 44, 44, 44, 45, 45, 45, 45, 45, 45,
-                            45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45,
-                            45, 45, 45, 45, 46, 46, 46, 46, 46, 46, 46, 46, 46,
-                            46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46,
-                            46, 46, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47,
-                            47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47,
-                            47, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48,
-                            48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48,
-                            49, 49, 49, 49, 49, 49, 49, 49, 49, 49, 49, 49, 49,
-                            49, 49, 49, 49, 49, 49, 49, 49, 49, 49, 49, 49, 50,
-                            50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50,
-                            50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 51, 51,
-                            51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51,
-                            51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 52, 52,
-                            52, 52, 52, 52, 52, 52, 52, 52, 52, 52, 52, 52, 52,
-                            52, 52, 52, 52, 52, 52, 52, 52, 52, 52, 52, 52, 53,
-                            53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53,
-                            53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 53, 54,
-                            54, 54, 54, 54, 54, 54, 54, 54, 54, 54, 54, 54, 54,
-                            54, 54, 54, 54, 54, 54, 54, 54, 54, 54, 54, 54, 54,
-                            55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55,
-                            55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55,
-                            55, 56, 56, 56, 56, 56, 56, 56, 56, 56, 56, 56, 56,
-                            56, 56, 56, 56, 56, 56, 56, 56, 56, 56, 56, 56, 56,
-                            56, 56, 56, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57,
-                            57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57,
-                            57, 57, 57, 57, 58, 58, 58, 58, 58, 58, 58, 58, 58,
-                            58, 58, 58, 58, 58, 58, 58, 58, 58, 58, 58, 58, 58,
-                            58, 58, 58, 58, 58, 59, 59, 59, 59, 59, 59, 59, 59,
-                            59, 59, 59, 59, 59, 59, 59, 59, 59, 59, 59, 59, 59,
-                            59, 59, 59, 59, 59, 59, 60, 60, 60, 60, 60, 60, 60,
-                            60, 60, 60, 60, 60, 60, 60, 60, 60, 60, 60, 60, 60,
-                            60, 60, 60, 60, 60, 60, 60, 60, 61, 61, 61, 61, 61,
-                            61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61,
-                            61, 61, 61, 61, 61, 61, 61, 61, 62, 62, 62, 62, 62,
-                            62, 62, 62, 62, 62, 62, 62, 62, 62, 62, 62, 62, 62,
-                            62, 62, 62, 62, 62, 62, 62, 62, 62, 63, 63, 63, 63,
-                            63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63,
-                            63, 63, 63, 63, 63, 63, 63, 63, 63, 64, 64, 64, 64,
-                            64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64,
-                            64, 64, 64, 64, 64, 64, 64, 64, 64, 65, 65, 65, 65,
-                            65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65,
-                            65, 65, 65, 65, 65, 65, 65, 65, 66, 66, 66, 66, 66,
-                            66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
-                            66, 66, 66, 66, 66, 66, 67, 67, 67, 67, 67, 67, 67,
-                            67, 67, 67, 67, 67, 67, 67, 67, 67, 67, 67, 67, 67,
-                            67, 67, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68,
-                            68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 69, 69, 69,
-                            69, 69, 69, 69, 69, 69, 69, 69, 69, 69, 69, 69, 69,
-                            69, 69, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70, 70,
-                            70, 70, 70, 70, 71, 2000, 70, 70, 70, 70, 70, 70, 70,
-                            70, 70, 70, 70, 70, 70, 69, 69, 69, 69, 69, 69, 69,
-                            69, 69, 69, 69, 69, 69, 69, 69, 69, 68, 68, 68, 68,
-                            68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68,
-                            68, 67, 67, 67, 67, 67, 67, 67, 67, 67, 67, 67, 67,
-                            67, 67, 67, 67, 67, 67, 67, 67, 66, 66, 66, 66, 66,
-                            66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
-                            66, 66, 66, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65,
-                            65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65,
-                            64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64,
-                            64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 63, 63,
-                            63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63,
-                            63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 63, 62, 62,
-                            62, 62, 62, 62, 62, 62, 62, 62, 62, 62, 62, 62, 62,
-                            62, 62, 62, 62, 62, 62, 62, 62, 62, 62, 62, 62, 62,
-                            61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61,
-                            61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61,
-                            61, 61, 61, 60, 60, 60, 60, 60, 60, 60, 60, 60, 60,
-                            60, 60, 60, 60, 60, 60, 60, 60, 60, 60, 60, 60, 60,
-                            60, 60, 60, 60, 60, 60, 60, 59, 59, 59, 59, 59, 59,
-                            59, 59, 59, 59, 59, 59, 59, 59, 59, 59, 59, 59, 59,
-                            59, 59, 59, 59, 59, 59, 59, 59, 59, 59, 59, 59, 59,
-                            58, 58, 58, 58, 58, 58, 58, 58, 58, 58, 58, 58};
-                            */
+  int nb_cells = options.nb_cells;
+  int *cell_weights = (int *)malloc(sizeof(int) * nb_cells);
+
+  if (nb_cells != 1000)
+  {
+    fprintf(stderr, "Only 1000 cells implemented\n");
+    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+  }
+
   int cell_weights_sum;
   int cell_weights_so_far;
 
@@ -145,11 +153,6 @@ Layer mpi_decompose_domain(MCMPIOptions &options)
 
   MPI_Comm_size(MPI_COMM_WORLD, &world_size);
   MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
-
-  if (WORKER_MPI_DECOMPOSE_DOMAIN_DIFFERENT_THREADS)
-    options.nthread = (my_rank % 8) + 1;
-  else
-    options.nthread = -1;
 
   int m_left = 41;
   int m_right = 41;
@@ -176,7 +179,7 @@ Layer mpi_decompose_domain(MCMPIOptions &options)
   }
 
   //Get own computing power and allocate memory for all of the other ranks' computer power
-  computation_power_own = get_power(options.nthread);
+  computation_power_own = get_power(options.nthread, use_gpu);
   computation_power_all = (float *)malloc(world_size * sizeof(float));
 
   //All ranks communicate among themselves the computing power of each
@@ -254,16 +257,34 @@ Layer mpi_decompose_domain(MCMPIOptions &options)
     printf("[%d]Layer: index_start = %d, m = %d, x_min = %f, x_max = %f\n", my_rank, layer.index_start, layer.m, layer.x_min, layer.x_max);
     printf("[%d]Work load = %d\n", my_rank, work_load);
   }
+
+  free(cell_weights);
   return layer;
 }
 
-Worker::Worker(int world_rank, MCMPIOptions &options)
-    : world_rank(world_rank), options(options), layer(mpi_decompose_domain(options)), timer()
+bool adjust_to_hardware(MCMPIOptions &options)
 {
-  if (WORKER_MPI_DECOMPOSE_DOMAIN_DIFFERENT_THREADS)
-    options.nthread = (world_rank % 8) + 1;
-  else
-    options.nthread = -1;
+  int world_rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
+  int local_size, local_rank;
+  MCMPI_Local(&local_size, &local_rank);
+
+  int nthread, ngpu;
+  MCMPI_Schedule(local_size, local_rank, &nthread, &ngpu);
+
+  options.nthread = nthread;
+  return (ngpu > 0);
+}
+
+Worker::Worker(int world_rank, MCMPIOptions &options)
+    : use_gpu(adjust_to_hardware(options)),
+      world_rank(world_rank), options(options),
+      layer(mpi_decompose_domain(options, use_gpu)),
+      timer()
+{
+  MPI_Barrier(MPI_COMM_WORLD);
+  usleep(50000 * world_rank);
+  printf("%2d/%2d: nthreads = %2d, use_gpu = %d, m = %3d\n", world_rank, options.world_size, options.nthread, (int)use_gpu, layer.m);
 }
 
 void Worker::dump()
@@ -345,15 +366,45 @@ void Worker::write_file(char *filename)
     displs[i] = displs[i - 1] + recvcounts[i - 1];
   }
 
-  // Write to collective file
-  MPI_File file;
-  MPI_File_open(MPI_COMM_WORLD, filename, MPI_MODE_WRONLY | MPI_MODE_CREATE,
-                MPI_INFO_NULL, &file);
+  // // Write to collective file
+  // MPI_File file;
+  // MPI_File_open(MPI_COMM_WORLD, filename, MPI_MODE_WRONLY | MPI_MODE_CREATE,
+  //               MPI_INFO_NULL, &file);
 
-  MPI_File_write_at_all(file, displs[world_rank], buf, offset, MPI_CHAR,
-                        MPI_STATUS_IGNORE);
+  // MPI_File_write_at_all(file, displs[world_rank], buf, offset, MPI_CHAR,
+  //                       MPI_STATUS_IGNORE);
 
-  MPI_File_close(&file);
+  // MPI_File_close(&file);
+
+  char *totalstring = NULL;
+  if (world_rank == 0)
+  {
+    totalstring = (char *)malloc(sizeof(char) * totlen);
+    totalstring[totlen - 1] = 0;
+  }
+
+  MPI_Gatherv(buf, offset, MPI_CHAR,
+              totalstring, recvcounts, displs, MPI_CHAR,
+              0, MPI_COMM_WORLD);
+
+  if (world_rank == 0)
+  {
+    // printf("%c\n", totalstring[totlen - 1]);
+    // printf("%s\n\n", totalstring);
+    // printf("%d ; %zu\n", totlen, strlen(totalstring));
+
+    FILE *file = fopen(filename, "w");
+
+    int results = fputs(totalstring, file);
+    if (results == EOF)
+    {
+      fprintf(stderr, "Abort in Worker::write_file. Couldn't write file.");
+      MPI_Abort(MPI_COMM_WORLD, 1);
+    }
+    fclose(file);
+  }
+
+  MPI_Barrier(MPI_COMM_WORLD);
 }
 
 void Worker::gather_weights_absorbed(int *total_len, int **displs,
@@ -395,7 +446,7 @@ void Worker::dump_config()
 {
   YamlDumper yaml_dumper("out/config.yaml");
   yaml_dumper.comment("Read from config");
-  yaml_dumper.dump_int("nb_cells_per_layer", options.nb_cells_per_layer);
+  yaml_dumper.dump_int("nb_cells", options.nb_cells);
   yaml_dumper.dump_double("x_min", options.x_min);
   yaml_dumper.dump_double("x_max", options.x_max);
   yaml_dumper.dump_double("x_ini", options.x_ini);
@@ -492,13 +543,7 @@ MCMPIOptions options_from_config(std::string filepath, int world_size)
   // // constants
   MCMPIOptions opt;
   opt.world_size = world_size;
-  //opt.nb_cells_per_layer = yaml_loader.load_int("nb_cells_per_layer");
-  if (1000 % world_size != 0)
-  {
-    fprintf(stderr, "1000 is not divideable by world_size\n");
-    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-  }
-  opt.nb_cells_per_layer = 1000 / world_size;
+  opt.nb_cells = yaml_loader.load_int("nb_cells");
   opt.x_min = yaml_loader.load_double("x_min");
   opt.x_max = yaml_loader.load_double("x_max");
   opt.x_ini = yaml_loader.load_double("x_ini");
