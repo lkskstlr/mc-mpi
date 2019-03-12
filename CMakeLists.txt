@@ -288,6 +288,27 @@ target_link_libraries(test_layer_perf
   layer
 )
 
+
+add_executable(test_layer_time_var src/test_layer_time_var.cpp)
+set_target_properties(test_layer_time_var PROPERTIES
+  CXX_STANDARD 11
+  CXX_STANDARD_REQUIRED YES
+  CXX_EXTENSIONS NO
+)
+target_link_libraries(test_layer_time_var
+  layer
+)
+
+add_executable(test_mcmpi_local src/test_mcmpi_local.cpp)
+set_target_properties(test_mcmpi_local PROPERTIES
+  CXX_STANDARD 11
+  CXX_STANDARD_REQUIRED YES
+  CXX_EXTENSIONS NO
+)
+target_link_libraries(test_mcmpi_local
+  PRIVATE MPI::MPI_C
+)
+
 if(CUDA_ENABLED)
   add_executable(test_gpu_errcheck src/test_gpu_errcheck.cu)
   target_link_libraries(test_gpu_errcheck

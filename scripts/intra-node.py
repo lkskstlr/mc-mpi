@@ -1,11 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Mar  6 20:48:36 2019
-
-@author: lukas.koestler
-"""
-
 #!/bin/env python3
 import subprocess
 import yaml
@@ -15,10 +7,10 @@ import re
 from pprint import pprint
 import numpy as np
 
-sha = "fc197f4bdf8f3dc3692fc24019bfd7f3c12d6442"
-filename = "../py_data.pkl"
-foldername = "experiment02"
+filename = "../intra-node.pkl"
+foldername = "intra-node"
 test = False
+m = 1
 
 def load_data():
     if os.path.exists(filename):
@@ -110,25 +102,31 @@ if __name__ == "__main__":
     check_env()
     
     data = load_data()
+    pprint(data)
     
-    nthread = 1
-    nb_particles = int(1e7)
+    nb_particles = int(1e6)
     
-    ns = np.array([1, 2, 4, 8, 16, 32, 64, 80])
-    Ns = np.ceil(ns/8).astype(np.int)
+    ns = np.arange(1, 9)
     modes = ("sync", "rma", "async")
+    comms = ("mpi", "openmp")
     
     
-    for n, N in zip(ns, Ns):
-        for mode in modes:
-            write_config(mode=mode, nb_particles=nb_particles, nthread=nthread)
-            write_batch(N=N, n=n, mode=mode)
-    
-            job_id = sbatch(test=test)
-            if job_id is not None:
-                data[job_id] = {'N': N, 'n': n, 'mode': mode, 'nb_particles': nb_particles, 'foldername': foldername, 'sha': sha}
-            save_data(data)
-    
+    for _m in range(m):
+        for n in ns:
+            for mode in modes:
+                for comm in comms:
+                    print(n)
+                    if comm == 'mpi':
+                        write_config(mode=mode, nb_particles=nb_particles, nthread=1)
+                        write_batch(N=1, n=n, mode=mode)
+                    else:
+                        write_config(mode=mode, nb_particles=nb_particles, nthread=int(n))
+                        write_batch(N=1, n=1, mode=mode)
+                    
+                    job_id = sbatch(test=test)
+                    if job_id is not None:
+                        data[job_id] = {'n': n, 'mode': mode, '_m': m, 'type': comm}
+                    save_data(data)
             
     save_data(data)
     

@@ -15,10 +15,9 @@ from pprint import pprint
 import numpy as np
 import matplotlib.pyplot as plt
 
-sha = "fc03906c5ae795e1450254408bee710ac1deee78"
+sha = "fc197f4bdf8f3dc3692fc24019bfd7f3c12d6442"
 filename = "../py_data.pkl"
-foldername = "experiment01"
-test = False
+foldername = "experiment02"
 m = 1
 
 def load_data():
@@ -36,67 +35,6 @@ def save_data(data):
     with open(filename, "wb") as file:
         pickle.dump(data, file)
         
-def write_batch(N, n, mode):
-    lines = list()
-    lines.append("#!/bin/bash")
-    if N is not None:
-        lines.append("#SBATCH -N {}".format(N))
-    if n is not None:
-        lines.append("#SBATCH -n {}".format(n))
-        
-    modes = ("sync", "rma", "async")
-    if not (mode in modes):
-        raise ValueError("Mode must be in {}".format(modes))
-    lines.append("mpirun ./main py_config.yaml {}".format(mode))
-    
-    with open("py_run.batch", "w") as file:
-        for line in lines:
-            print(line, file=file)
-            
-def write_config(mode, nb_particles = 1000000, nthread=-1):
-    nb_particles_per_cycle = {
-        'sync': 100000,
-        'async': 500,
-        'rma': 65000    
-    }
-    
-    config = {
-            'x_min': 0.0,
-            'x_max': 1.0,
-            'x_ini': 0.7071067690849304,
-            'nb_cells': 1000,
-            'nb_particles': int(nb_particles),
-            'particle_min_weight': 1e-12,
-            'cycle_time': 1e-5,
-            'statistics_cycle_time': 0.1,
-            'nthread': nthread
-            }
-    modes = ("sync", "rma", "async")
-    if not (mode in modes):
-        raise ValueError("Mode must be in {}".format(modes))
-    config['nb_particles_per_cycle'] = nb_particles_per_cycle[mode]
-    
-    with open("py_config.yaml", "w") as file:
-        yaml.dump(config, file, default_flow_style=False)
-        
-def sbatch(test=True):
-    if test:
-        with open("py_run.batch", 'r') as file:
-            print(file.read())
-        with open("py_config.yaml", 'r') as file:
-            pprint(yaml.load(file))
-        return None
-    
-    p = subprocess.Popen("sbatch py_run.batch", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    p.wait()
-    lines = [x.decode('ascii').rstrip() for x in p.stdout.readlines()]
-    for line in lines:
-        print(line)
-    exp = re.compile("Submitted batch job (\d+)")
-    res = re.match(exp, lines[0])
-    if res is None:
-        raise ValueError("Could not match job")
-    return int(res.group(1))
     
 def get_times(ids):
     times = np.empty((len(ids, )), dtype=np.float)
@@ -129,26 +67,49 @@ def plot_data(data):
         times[mode] = np.empty((ns.size, ), dtype=np.float)
         times[mode][:] = np.nan
         for i in range(ns.size):
-            _d = [d['time'] for d in data.values() if (d['sha'] == sha and d['mode'] == mode and d['n'] == ns[i] and d['N'] == Ns[i])]
+            _d = [d['time'] for d in data.values() if (d['foldername'] == foldername and d['sha'] == sha and d['mode'] == mode and d['n'] == ns[i] and d['N'] == Ns[i])]
             assert len(_d) == m, "Found not exactly {} time".format(m)
             times[mode][i] = np.median(np.array(_d))
     
-    plt.figure()
+    fig = plt.figure(figsize=(2,2))
     for mode in modes:
         plt.plot(ns, times[mode], '+-', label=mode)
     plt.legend()
+    plt.xlabel("Num. MPI processes")
+    plt.ylabel("Runtime [s]")
+    plt.title("Runtime for pure MPI")
+    plt.grid("on")
     plt.show()
+    fig.savefig("pure_mpi_runtime.png", dpi=300, bbox_inches='tight', pad_inches=0)
     
-    t_ref = 2700.0
+    
+    t_ref = 270.0
     rs = dict()
     for mode in modes:
         rs[mode] = (t_ref / times[mode]) / (ns/1)
     
-    plt.figure()
+    fig = plt.figure(figsize=(2,2))
     for mode in modes:
         plt.semilogy(ns, rs[mode], '+-', label=mode)
     plt.legend()
+    plt.xlabel("Num. MPI processes")
+    plt.ylabel("Parallel Efficiency")
+    plt.title("Parallel efficiency for pure MPI")
+    plt.grid("on")
     plt.show()
+    fig.savefig("pure_mpi_efficiency.png", dpi=300, bbox_inches='tight', pad_inches=0)
+    
+    fig = plt.figure(figsize=(2,2))
+    for mode in modes:
+        plt.plot(ns, rs[mode], '+-', label=mode)
+    plt.legend()
+    plt.xlabel("Num. MPI processes")
+    plt.ylabel("Parallel Efficiency")
+    plt.title("Parallel efficiency for pure MPI")
+    plt.grid("on")
+    plt.show()
+    fig.savefig("pure_mpi_efficiency_log.png", dpi=300, bbox_inches='tight', pad_inches=0)
+    
             
 
 if __name__ == "__main__":
@@ -156,8 +117,6 @@ if __name__ == "__main__":
     
     data = load_data()
     ids = sorted([x for x in data.keys() if (data[x]['foldername'] == foldername and data[x]['sha'] == sha)])
-    pprint(data)
-    pprint(ids)
     times = get_times(ids)
     
     for i, time in zip(ids, times):

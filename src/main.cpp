@@ -70,7 +70,10 @@ int main(int argc, char **argv)
   }
   else if (pair.second.compare("async") == 0)
   {
+    MPI_Barrier(MPI_COMM_WORLD);
+    usleep(10000 * world_rank);
     worker = new WorkerAsync(world_rank, options);
+    MPI_Barrier(MPI_COMM_WORLD);
   }
   else if (pair.second.compare("rma") == 0)
   {

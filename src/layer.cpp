@@ -14,12 +14,39 @@
 
 #define MAX_PARTICLES_VECTOR 1000000
 
-Layer decompose_domain(real_t x_min, real_t x_max, real_t x_ini, int world_size,
-                       int world_rank, int nb_cells, int nb_particles,
-                       real_t particle_min_weight)
+Layer decompose_domain_file(real_t x_ini, int world_size, int world_rank, int nb_particles, real_t particle_min_weight)
 {
   assert(x_max > x_min);
 
+  int bnds[11] = {0, 147, 274, 388, 492, 588, 677, 737, 819, 906, 1000};
+  /* start and end index */
+
+  real_t dx = 1e-3;
+  int cell_ini = (int)(x_ini / dx);
+  int start_index = bnds[world_rank];
+  int m = bnds[world_rank + 1] - start_index;
+
+  Layer layer(start_index * dx, (start_index + m) * dx,
+              start_index, m, particle_min_weight);
+  if ((cell_ini >= start_index) && (cell_ini < start_index + m))
+  {
+    seed_t seed = 5127801;
+    // printf("Particles created in %d\n", world_rank);
+    layer.create_particles(x_ini, 1.0 / nb_particles, nb_particles, seed);
+  }
+
+  printf("%d/%d: [%d, %d)\n", world_rank, world_size, start_index, start_index + m);
+
+  return layer;
+}
+
+Layer decompose_domain(real_t x_min, real_t x_max, real_t x_ini, int world_size,
+                       int world_rank, int nb_cells, int nb_particles,
+                       real_t particle_min_weight, seed_t add_seed)
+{
+  assert(x_max > x_min);
+
+  // return decompose_domain_file(x_ini, world_size, world_rank, nb_particles, particle_min_weight);
   /* start and end index */
   int cells_per_layer = nb_cells / world_size;
   int num_with_extra = nb_cells % world_size;
@@ -33,7 +60,7 @@ Layer decompose_domain(real_t x_min, real_t x_max, real_t x_ini, int world_size,
               start_index, nb_my_cells, particle_min_weight);
   if ((cell_ini >= start_index) && (cell_ini < start_index + nb_my_cells))
   {
-    seed_t seed = 5127801;
+    seed_t seed = 5127801 + add_seed;
     // printf("Particles created in %d\n", world_rank);
     layer.create_particles(x_ini, 1.0 / nb_particles, nb_particles, seed);
   }
