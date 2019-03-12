@@ -4,6 +4,8 @@ project(mc-mpi C CXX)
 cmake_policy(SET CMP0074 NEW)
 
 option(CUDA_ENABLED "Build and test with CUDA support." OFF)
+option(DEMO_MODE "Compile for demo mode." OFF)
+
 
 
 if(CUDA_ENABLED)
@@ -185,6 +187,10 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 else()
   target_compile_features(mcmpi PUBLIC cxx_lambda_init_captures)
 endif()
+if(DEMO_MODE)
+  target_compile_definitions(mcmpi PUBLIC -DDEMO_MODE)
+endif()
+
 target_include_directories(mcmpi PUBLIC include/mcmpi)
 set_target_properties(mcmpi PROPERTIES
   CXX_STANDARD 11

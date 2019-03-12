@@ -18,35 +18,53 @@
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 
-#define WORKER_MPI_DECOMPOSE_DOMAIN_PRINT 0
-#define WORKER_MPI_DECOMPOSE_DOMAIN_DIFFERENT_THREADS 0
+#define WORKER_MPI_DECOMPOSE_DOMAIN_PRINT 1
+
+int cuda_get_num_gpus()
+{
+  return 1;
+}
 
 void MCMPI_Schedule(int local_size, int local_rank, int *number_threads_rank, int *gpu_enabled)
 {
   //Get the number of total threads in the node
   int number_threads_total = omp_get_num_procs();
-  //If there is only one process (rank) in the machine (local_size == 1), this rank should have as many
-  //threads as it can, and the gpu is enabled
+  int number_gpus_total = cuda_get_num_gpus();
+
+  //If there is only one process (rank) in the machine (local_size == 1), all resources of the machine
+  //are assigned to this rank.
   if (local_size == 1)
   {
-    *number_threads_rank = 1;
-    *gpu_enabled = 1;
+    *number_threads_rank = -1;
+    *gpu_enabled = number_gpus_total;
   }
   //If the node has more than one process
   else
   {
-    //The first process gets the usage of the gpu and only one thread
-    if (local_rank == 0)
+    //If there is a gpu
+    if (number_gpus_total == 1)
     {
-      *number_threads_rank = 1;
-      *gpu_enabled = 1;
+      //The first process gets the usage of the gpu and only one thread
+      if (local_rank == 0)
+      {
+        *number_threads_rank = 1;
+        *gpu_enabled = 1;
+      }
+      //The rest of the processes get the remaining threads as evenly divided as possible and no gpu
+      else
+      {
+        local_rank--;
+        local_size--;
+        number_threads_total--;
+        *number_threads_rank = (number_threads_total) / (local_size);
+        if (local_rank < (number_threads_total % local_size))
+          (*number_threads_rank)++;
+        *gpu_enabled = 0;
+      }
     }
-    //The rest of the processes get the remaining threads as evenly divided as possible and no gpu
+    //If there is no gpu, all processes get the number of threads as evenly divided as possible (and no gpu)
     else
     {
-      local_rank--;
-      local_size--;
-      number_threads_total--;
       *number_threads_rank = (number_threads_total) / (local_size);
       if (local_rank < (number_threads_total % local_size))
         (*number_threads_rank)++;
@@ -156,7 +174,7 @@ Layer mpi_decompose_domain(MCMPIOptions &options, bool use_gpu)
 
   int m_left = 41;
   int m_right = 41;
-  int d = 2100;
+  int d = 500;
   int h = 71;
   //Hardcode cell weights and get the total sum
   /*
@@ -265,12 +283,54 @@ Layer mpi_decompose_domain(MCMPIOptions &options, bool use_gpu)
 bool adjust_to_hardware(MCMPIOptions &options)
 {
   int world_rank;
+  int world_size;
+  int number_threads_total = omp_get_num_procs();
   MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &world_size);
   int local_size, local_rank;
   MCMPI_Local(&local_size, &local_rank);
 
   int nthread, ngpu;
   MCMPI_Schedule(local_size, local_rank, &nthread, &ngpu);
+
+#ifdef DEMO_MODE
+  if (world_size != 7)
+  {
+    printf("To run in DEMO_MODE, use -N 5 -n 7\n");
+    exit(1);
+  }
+  else if (world_rank == 0)
+    printf("Running in DEMO_MODE...\n");
+
+  switch (world_rank)
+  {
+  case 0:
+    ngpu = 1;
+    nthread = 1;
+    break;
+  case 1:
+    ngpu = 0;
+    nthread = number_threads_total - 1;
+    break;
+  case 2:
+  case 3:
+    ngpu = 0;
+    nthread = MAX(number_threads_total / 2, 1);
+    break;
+  case 4:
+    ngpu = 1;
+    nthread = -1;
+    break;
+  case 5:
+    ngpu = 0;
+    nthread = -1;
+    break;
+  case 6:
+    ngpu = 0;
+    nthread = 2;
+    break;
+  }
+#endif /*DEMO_MODE*/
 
   options.nthread = nthread;
   return (ngpu > 0);
