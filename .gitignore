@@ -2,13 +2,14 @@
 eze.py
 lukas.py
 docs/
-build/
+build*/
 out/
 experiment*/
 intra-node/
 graveyard/
 sequential/
 releases/
+intra-node/
 mc_mpi.sublime-workspace
 README.pdf
 toy_examples/logs

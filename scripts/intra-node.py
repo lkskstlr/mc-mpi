@@ -3,14 +3,13 @@ import subprocess
 import yaml
 import pickle
 import os
-import re
 from pprint import pprint
 import numpy as np
+import matplotlib.pyplot as plt
 
-filename = "../intra-node.pkl"
+filename = "intra-node.pkl"
 foldername = "intra-node"
 test = False
-m = 1
 
 def load_data():
     if os.path.exists(filename):
@@ -27,22 +26,6 @@ def save_data(data):
     with open(filename, "wb") as file:
         pickle.dump(data, file)
         
-def write_batch(N, n, mode):
-    lines = list()
-    lines.append("#!/bin/bash")
-    if N is not None:
-        lines.append("#SBATCH -N {}".format(N))
-    if n is not None:
-        lines.append("#SBATCH -n {}".format(n))
-        
-    modes = ("sync", "rma", "async")
-    if not (mode in modes):
-        raise ValueError("Mode must be in {}".format(modes))
-    lines.append("mpirun ./main py_config.yaml {}".format(mode))
-    
-    with open("py_run.batch", "w") as file:
-        for line in lines:
-            print(line, file=file)
             
 def write_config(mode, nb_particles = 1000000, nthread=-1):
     nb_particles_per_cycle = {
@@ -70,65 +53,57 @@ def write_config(mode, nb_particles = 1000000, nthread=-1):
     with open("py_config.yaml", "w") as file:
         yaml.dump(config, file, default_flow_style=False)
         
-def sbatch(test=True):
+def mpirun(n, mode, test=True):
     if test:
-        with open("py_run.batch", 'r') as file:
-            print(file.read())
+        print(n)
+        print(mode)
         with open("py_config.yaml", 'r') as file:
             pprint(yaml.load(file))
         return None
     
-    p = subprocess.Popen("sbatch py_run.batch", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    p = subprocess.Popen("mpirun -n {} ./main py_config.yaml {}".format(n, mode), shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     p.wait()
     lines = [x.decode('ascii').rstrip() for x in p.stdout.readlines()]
-    for line in lines:
-        print(line)
-    exp = re.compile("Submitted batch job (\d+)")
-    res = re.match(exp, lines[0])
-    if res is None:
-        raise ValueError("Could not match job")
-    return int(res.group(1))
+    return float(lines[0])
     
-
-def check_env():
-    p = subprocess.Popen("which mpirun", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    p.wait()
-    lines = [x.decode('ascii').rstrip() for x in p.stdout.readlines()]
-    assert lines[0] == "/users/profs/2017/francois.trahay/soft/install/openmpi/bin/mpirun", "Not running correct environment. source set_env.sh?"
 
 
 if __name__ == "__main__":
     os.chdir("../{}".format(foldername))
-    check_env()
+    
+    nb_particles = int(1e6)
+    ns = np.arange(1, 9)
+    modes = ("sync", "rma", "async")
     
     data = load_data()
     pprint(data)
     
-    nb_particles = int(1e6)
-    
-    ns = np.arange(1, 9)
-    modes = ("sync", "rma", "async")
-    comms = ("mpi", "openmp")
-    
-    
-    for _m in range(m):
-        for n in ns:
-            for mode in modes:
-                for comm in comms:
-                    print(n)
-                    if comm == 'mpi':
-                        write_config(mode=mode, nb_particles=nb_particles, nthread=1)
-                        write_batch(N=1, n=n, mode=mode)
-                    else:
-                        write_config(mode=mode, nb_particles=nb_particles, nthread=int(n))
-                        write_batch(N=1, n=1, mode=mode)
+    if False:
+        for mode in modes:
+            data[mode] = np.zeros(ns.shape, dtype=np.float)
+            for i,n in enumerate(ns):
+                    write_config(mode=mode, nb_particles=nb_particles, nthread=1)
+                    _time = mpirun(n, mode, test=test)
                     
-                    job_id = sbatch(test=test)
-                    if job_id is not None:
-                        data[job_id] = {'n': n, 'mode': mode, '_m': m, 'type': comm}
-                    save_data(data)
-            
-    save_data(data)
-    
+                    if _time is not None:
+                        data[mode][i] = _time
+                        print("n = {}, {}, {}".format(n, mode, _time))
+                        save_data(data)
+                        
+    else:
+        times_omp = np.load("../times_static_3.npy")
+        fig = plt.figure(figsize=(5,3))
+        for mode in modes:
+            plt.plot(ns, data[mode][0]/data[mode], '+-', label=mode)
+        plt.plot(ns, times_omp[0]/times_omp, '+-', label="OpenMP")
+        plt.plot(ns[0:4], ns[0:4], 'r:', label='optimal')
+        plt.xlabel("processes/threads")
+        plt.ylabel("Speedup")
+        plt.title("MPI/OpenMP for shared memory")
+        plt.grid("on")
+        plt.legend()
+        plt.show()
+        fig.savefig("shared_memory.png", dpi=300, bbox_inches='tight', pad_inches=0)
+        plt.show()
     
     

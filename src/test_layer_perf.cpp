@@ -25,7 +25,7 @@ int main(int argc, char const *argv[])
                                particle_min_weight));
 
   auto start = high_resolution_clock::now();
-  layer.simulate(-1, nthread);
+  layer.simulate(-1, nthread, true);
   auto finish = high_resolution_clock::now();
 
   std::chrono::duration<double, std::milli> elapsed = finish - start;
