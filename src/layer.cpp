@@ -18,7 +18,10 @@ Layer decompose_domain_file(real_t x_ini, int world_size, int world_rank, int nb
 {
   assert(x_max > x_min);
 
-  int bnds[11] = {0, 147, 274, 388, 492, 588, 677, 737, 819, 906, 1000};
+  // param: 85, 50, 2
+  // run 38455
+  int bnds[11] = {0, 141, 266, 380, 485, 584, 676, 738, 821, 908, 1000};
+  //array([   0,  147,  274,  388,  492,  588,  677,  737,  819,  906, 1000]) 38029
   /* start and end index */
 
   real_t dx = 1e-3;
@@ -340,7 +343,7 @@ void Layer::simulate(int nb_particles, int nthread, bool use_gpu)
   {
     std::vector<real_t> weights_absorbed_local;
     weights_absorbed_local.resize(weights_absorbed.size(), 0.0);
-#pragma omp for schedule(static)
+#pragma omp for schedule(dynamic)
     for (int i = 0; i < nb_particles; i++)
     {
       result[i] = simulate_particle(particles[particles_size - 1 - i],

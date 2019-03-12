@@ -15,10 +15,11 @@ from pprint import pprint
 import numpy as np
 import matplotlib.pyplot as plt
 
-sha = "fc197f4bdf8f3dc3692fc24019bfd7f3c12d6442"
+
+sha = "2a50a4c96ee899af3e325fedd5537bd2c3a14d1a"
 filename = "../py_data.pkl"
-foldername = "experiment02"
-m = 1
+foldername = "experiment03"
+m = 5
 
 def load_data():
     if os.path.exists(filename):
@@ -69,7 +70,7 @@ def plot_data(data):
         for i in range(ns.size):
             _d = [d['time'] for d in data.values() if (d['foldername'] == foldername and d['sha'] == sha and d['mode'] == mode and d['n'] == ns[i] and d['N'] == Ns[i])]
             assert len(_d) == m, "Found not exactly {} time".format(m)
-            times[mode][i] = np.median(np.array(_d))
+            times[mode][i] = np.min(np.array(_d))
     
     fig = plt.figure(figsize=(2,2))
     for mode in modes:
@@ -83,7 +84,7 @@ def plot_data(data):
     fig.savefig("pure_mpi_runtime.png", dpi=300, bbox_inches='tight', pad_inches=0)
     
     
-    t_ref = 270.0
+    t_ref = 27.0
     rs = dict()
     for mode in modes:
         rs[mode] = (t_ref / times[mode]) / (ns/1)
@@ -118,6 +119,7 @@ if __name__ == "__main__":
     data = load_data()
     ids = sorted([x for x in data.keys() if (data[x]['foldername'] == foldername and data[x]['sha'] == sha)])
     times = get_times(ids)
+    times[np.isnan(times)] = 10*np.nanmax(times)
     
     for i, time in zip(ids, times):
         if not np.isnan(time):

@@ -28,8 +28,6 @@ int main(int argc, char const *argv[])
   layer.simulate(-1, nthread);
   auto finish = high_resolution_clock::now();
 
-  layer.dump_WA();
-
   std::chrono::duration<double, std::milli> elapsed = finish - start;
   printf("%f\n", elapsed.count() / 1e3);
   return 0;

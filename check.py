@@ -6,7 +6,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # 38029
-slurm_job_id = 38455
+slurm_job_id = 38455#38455
 folderpath = "out/{}/".format(slurm_job_id)
 
 def decompose_domain2(world_size, h, m, c):
