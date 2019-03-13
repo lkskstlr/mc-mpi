@@ -84,7 +84,7 @@ def decompose_domain(world_size, h, m, c):
 try:
     data = dict()
     data['df_w'] = pd.read_csv(folderpath+"weights.csv", skipinitialspace=True)
-    data['data_w'] = np.genfromtxt('tex/data/WA_1000_1000000.out', delimiter=' ')
+    data['data_w'] = np.genfromtxt('data/WA_1000_1000000.out', delimiter=' ')
     
     df_w = data['df_w']
     data_w = data['data_w']
