@@ -6,7 +6,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # 38029
-slurm_job_id = 43738#38455
+# no problem unif decom 43738
+# no problems unif used for decomp: 38029
+slurm_job_id = 38455#38455
 folderpath = "out/{}/".format(slurm_job_id)
 
 def decompose_domain2(world_size, h, m, c):
