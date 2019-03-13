@@ -37,18 +37,6 @@ RelWithDebInfo MinSizeRel."
   message(STATUS "Setting Build Type to Release (default)")
 endif(NOT CMAKE_BUILD_TYPE)
 
-########## Global Compile Flags ##########
-if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-  if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 4.9)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror -pedantic")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Werror -pedantic")
-  else()
-    message(STATUS "Old compiler version. Compiling without -Wall -Werror -pedantic")
-  endif()
-else()
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror -pedantic")
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Werror -pedantic")
-endif()
 
 ########## Required Packages ##########
 find_package(OpenMP REQUIRED)
