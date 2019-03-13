@@ -5,10 +5,8 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# 38029
-# no problem unif decom 43738
-# no problems unif used for decomp: 38029
-slurm_job_id = 38455#38455
+
+slurm_job_id = 38455
 folderpath = "out/{}/".format(slurm_job_id)
 
 def decompose_domain2(world_size, h, m, c):
@@ -63,35 +61,18 @@ def decompose_domain(world_size, h, m, c):
     assert len(ind) == 1
     x_min = z - 0.5*sols[ind[0]]
     x_max = z + 0.5*sols[ind[0]]
-#    print(np.polyval(coeff, sols[ind[0]]))
     
     f0left = h-z*m
     f0right = h - (x_max-z)*m
     Ileft = f0left*x_min + 0.5*x_min*x_min*m
     Iright = f0right*(1-x_max) - 0.5*(1-x_max)**2*m
     
-#    print(x_min)
-#    print(x_max)
-    
-#    print(Ileft)
-#    print(Iright)
-    
-#    print(Ileft+Iright+dI - I)
-    
-#    print(f0right*(x_max-x_min) + 0.25*m*(x_max-x_min)**2 + c - dI)
-#    print((h-m*0.5*(x_max-x_min))*(x_max-x_min) + 0.25*m*(x_max-x_min)**2 + c - dI)
-    
     nleft = int(np.round((Ileft)/(Ileft+Iright) * (world_size-1)))
     nright = world_size- 1 - nleft
-    
-#    print(nleft)
-#    print(nright)
     
     xs_left = decomp_linear(nleft, f0left, m, Ileft/nleft)
     xs_right = decomp_linear(nright, f0right, -m, Iright/nright) + x_max
     
-#    print(xs_left)
-#    print(xs_right)
     
     assert np.allclose(xs_left[-1], x_min)
     assert np.allclose(xs_right[-1], 1.0)
@@ -202,7 +183,6 @@ for proc in range(0, world_size):
 
 print(np.sum(total_work))
 print(np.sum(expectedwork))
-#print(sol[0]-0.5*sol[1]*(1/2 + (1-1/np.sqrt(2))**2)+const)
         
 const = total_work[special] - expectedwork[special]
 expectedwork[special] = total_work[special]
