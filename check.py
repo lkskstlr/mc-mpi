@@ -61,41 +61,41 @@ for proc in range(0, world_size):
 plt.tight_layout()    
 plt.show()
         
-f, (ax, ax2) = plt.subplots(2, 1, sharex=True, figsize=(10,8))
-x1 = np.arange(0., 0.707, 0.001)
-x2 = np.arange(0.708, 1.0, 0.001)
-# plot the same data on both axes
-ax.plot([0.706, 0.707, 0.708], [70.959, 2100, 70.959], 'b', linewidth = 2.2)
-ax2.plot(x1, 41*x1 + 42.013, 'b', x2, 41 * -x2 + 99.987, 'b', [0.706, 0.707, 0.708], [70.959, 2100, 70.959], 'b')
-
-# zoom-in / limit the view to different portions of the data
-ax.set_ylim(2050, 2150)  # outliers only
-ax2.set_ylim(35, 90)  # most of the data
-
-# hide the spines between ax and ax2
-ax.spines['bottom'].set_visible(False)
-ax2.spines['top'].set_visible(False)
-ax.xaxis.tick_top()
-ax.tick_params(labeltop='off')  # don't put tick labels at the top
-ax2.xaxis.tick_bottom()
-
-
-d = .015  # how big to make the diagonal lines in axes coordinates
-# arguments to pass to plot, just so we don't keep repeating them
-kwargs = dict(transform=ax.transAxes, color='k', clip_on=False)
-ax.plot((-d, +d), (-d, +d), **kwargs)        # top-left diagonal
-ax.plot((1 - d, 1 + d), (-d, +d), **kwargs)  # top-right diagonal
-
-kwargs.update(transform=ax2.transAxes)  # switch to the bottom axes
-ax2.plot((-d, +d), (1 - d, 1 + d), **kwargs)  # bottom-left diagonal
-ax2.plot((1 - d, 1 + d), (1 - d, 1 + d), **kwargs)  # bottom-right diagonal
-
-
-plt.ylabel('Weight')
-plt.xlabel('x')
-
-plt.tight_layout()
-plt.show()
+#f, (ax, ax2) = plt.subplots(2, 1, sharex=True, figsize=(6,4))
+#x1 = np.arange(0., 0.707, 0.001)
+#x2 = np.arange(0.708, 1.0, 0.001)
+## plot the same data on both axes
+#ax.plot([0.706, 0.707, 0.708], [70.959, 2100, 70.959], 'C0', linewidth = 2.2)
+#ax2.plot(x1, 41*x1 + 42.013, 'C0', x2, 41 * -x2 + 99.987, 'C0', [0.706, 0.707, 0.708], [70.959, 2100, 70.959], 'C0')
+#
+## zoom-in / limit the view to different portions of the data
+#ax.set_ylim(2050, 2150)  # outliers only
+#ax2.set_ylim(35, 90)  # most of the data
+#
+## hide the spines between ax and ax2
+#ax.spines['bottom'].set_visible(False)
+#ax2.spines['top'].set_visible(False)
+#ax.xaxis.tick_top()
+#ax.tick_params(labeltop='off')  # don't put tick labels at the top
+#ax2.xaxis.tick_bottom()
+#
+#
+#d = .015  # how big to make the diagonal lines in axes coordinates
+## arguments to pass to plot, just so we don't keep repeating them
+#kwargs = dict(transform=ax.transAxes, color='k', clip_on=False)
+#ax.plot((-d, +d), (-d, +d), **kwargs)        # top-left diagonal
+#ax.plot((1 - d, 1 + d), (-d, +d), **kwargs)  # top-right diagonal
+#
+#kwargs.update(transform=ax2.transAxes)  # switch to the bottom axes
+#ax2.plot((-d, +d), (1 - d, 1 + d), **kwargs)  # bottom-left diagonal
+#ax2.plot((1 - d, 1 + d), (1 - d, 1 + d), **kwargs)  # bottom-right diagonal
+#
+#
+#plt.ylabel('Weight')
+#plt.xlabel('x')
+#
+#plt.tight_layout()
+#plt.show()
 
 for proc in range(0, world_size):
     X = stats[stats['rank'] == proc]

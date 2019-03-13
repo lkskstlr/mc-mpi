@@ -12,7 +12,7 @@
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 
-#define MAX_PARTICLES_VECTOR 1000000
+#define MAX_PARTICLES_VECTOR 10000000
 
 Layer decompose_domain(real_t x_min, real_t x_max, real_t x_ini, int world_size,
                        int world_rank, int nb_cells, int nb_particles,

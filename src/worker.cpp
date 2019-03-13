@@ -128,6 +128,8 @@ float get_power(int nthread, bool use_gpu)
                                nb_cells_per_layer, nb_particles,
                                particle_min_weight));
 
+  MPI_Barrier(MPI_COMM_WORLD);
+
   auto start = high_resolution_clock::now();
   layer.simulate(-1, nthread, use_gpu);
   auto finish = high_resolution_clock::now();
@@ -147,11 +149,11 @@ Layer mpi_decompose_domain(MCMPIOptions &options, bool use_gpu)
   int nb_cells = options.nb_cells;
   int *cell_weights = (int *)malloc(sizeof(int) * nb_cells);
 
-  if (nb_cells != 1000)
-  {
-    fprintf(stderr, "Only 1000 cells implemented\n");
-    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-  }
+  // if (nb_cells != 1000)
+  // {
+  //   fprintf(stderr, "Only 1000 cells implemented\n");
+  //   MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+  // }
 
   int cell_weights_sum;
   int cell_weights_so_far;
@@ -170,7 +172,7 @@ Layer mpi_decompose_domain(MCMPIOptions &options, bool use_gpu)
 
   int m_left = 41;
   int m_right = 41;
-  int d = 500;
+  int d = 150;
   int h = 71;
   //Hardcode cell weights and get the total sum
   /*
@@ -180,12 +182,13 @@ Layer mpi_decompose_domain(MCMPIOptions &options, bool use_gpu)
   with slope minus m_right which also should be h at cell 707. Cell 707's weight is d
   (this represents a delta for the computation it takes to create a new particle)
   */
+  int init_cell = (int)((float)nb_cells * 1.0 / sqrt(2.0));
   for (i = 0, cell_weights_sum = 0; i < nb_cells; i++)
   {
-    if (i < 707)
-      cell_weights[i] = h - (int)(((float)(707 - i) / (float)1000) * m_left);
-    else if (i > 707)
-      cell_weights[i] = h - (int)(((float)(i - 707) / (float)1000) * m_right);
+    if (i < init_cell)
+      cell_weights[i] = h - (int)(((float)(init_cell - i) / (float)nb_cells) * m_left);
+    else if (i > init_cell)
+      cell_weights[i] = h - (int)(((float)(i - init_cell) / (float)nb_cells) * m_right);
     else
       cell_weights[i] = d;
 
@@ -193,6 +196,7 @@ Layer mpi_decompose_domain(MCMPIOptions &options, bool use_gpu)
   }
 
   //Get own computing power and allocate memory for all of the other ranks' computer power
+  //MPI_Barrier(MPI_COMM_WORLD);
   computation_power_own = get_power(options.nthread, use_gpu);
   computation_power_all = (float *)malloc(world_size * sizeof(float));
 
@@ -246,7 +250,7 @@ Layer mpi_decompose_domain(MCMPIOptions &options, bool use_gpu)
   if ((x_min_layer <= options.x_ini) && (options.x_ini < x_max_layer))
   {
     if (WORKER_MPI_DECOMPOSE_DOMAIN_PRINT)
-      printf("World rank: %d / %d\n", my_rank, world_size);
+      printf("\nInitial particles generated in world rank: %d / %d\n", my_rank, world_size);
     seed_t seed = 5127801;
     layer.create_particles(options.x_ini, 1.0 / options.nb_particles, options.nb_particles, seed);
   }
@@ -262,7 +266,7 @@ Layer mpi_decompose_domain(MCMPIOptions &options, bool use_gpu)
     usleep(20000 * my_rank);
     if (my_rank == 0)
     {
-      printf("\nDebugging\t\tCells: %d\tCell weights sum: %d\n", nb_cells, cell_weights_sum);
+      printf("Cells: %d\tCell weights sum: %d\n", nb_cells, cell_weights_sum);
       // for (i = 0; i < 1000; i += 10)
       //   printf("Cell_weights[%d] = %d\n", i, cell_weights[i]);
     }
