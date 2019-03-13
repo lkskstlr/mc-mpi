@@ -149,12 +149,6 @@ Layer mpi_decompose_domain(MCMPIOptions &options, bool use_gpu)
   int nb_cells = options.nb_cells;
   int *cell_weights = (int *)malloc(sizeof(int) * nb_cells);
 
-  // if (nb_cells != 1000)
-  // {
-  //   fprintf(stderr, "Only 1000 cells implemented\n");
-  //   MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-  // }
-
   int cell_weights_sum;
   int cell_weights_so_far;
 
@@ -267,8 +261,6 @@ Layer mpi_decompose_domain(MCMPIOptions &options, bool use_gpu)
     if (my_rank == 0)
     {
       printf("Cells: %d\tCell weights sum: %d\n", nb_cells, cell_weights_sum);
-      // for (i = 0; i < 1000; i += 10)
-      //   printf("Cell_weights[%d] = %d\n", i, cell_weights[i]);
     }
     printf("[%d]Computation power: %f\n", my_rank, computation_power_own);
     printf("[%d]r_min: %f\tr_max: %f\tx_min: %f\tx_max: %f\tcell_min: %d\tcell_max: %d\n", my_rank, r_min, r_max, layer.x_min, layer.x_max, cell_min, cell_max);
@@ -426,16 +418,6 @@ void Worker::write_file(char *filename)
     displs[i] = displs[i - 1] + recvcounts[i - 1];
   }
 
-  // // Write to collective file
-  // MPI_File file;
-  // MPI_File_open(MPI_COMM_WORLD, filename, MPI_MODE_WRONLY | MPI_MODE_CREATE,
-  //               MPI_INFO_NULL, &file);
-
-  // MPI_File_write_at_all(file, displs[world_rank], buf, offset, MPI_CHAR,
-  //                       MPI_STATUS_IGNORE);
-
-  // MPI_File_close(&file);
-
   char *totalstring = NULL;
   if (world_rank == 0)
   {
@@ -449,10 +431,6 @@ void Worker::write_file(char *filename)
 
   if (world_rank == 0)
   {
-    // printf("%c\n", totalstring[totlen - 1]);
-    // printf("%s\n\n", totalstring);
-    // printf("%d ; %zu\n", totlen, strlen(totalstring));
-
     FILE *file = fopen(filename, "w");
 
     int results = fputs(totalstring, file);
@@ -600,7 +578,7 @@ void Worker::dump_weights_absorbed(int total_len, int const *displs,
 MCMPIOptions options_from_config(std::string filepath, int world_size)
 {
   YamlLoader yaml_loader(filepath);
-  // // constants
+  // constants
   MCMPIOptions opt;
   opt.world_size = world_size;
   opt.nb_cells = yaml_loader.load_int("nb_cells");

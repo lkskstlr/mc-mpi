@@ -47,8 +47,7 @@ void WorkerSync::spin()
       old_size = layer.particles.size();
       layer.particles.resize(layer.particles.size() +
                              options.nb_particles_per_cycle);
-      /************************** [ODDS] <==> [EVENS]
-       * ****************************/
+      /************************** [ODDS] <==> [EVENS] *****************************/
       recv_count = 0;
       if ((world_rank % 2) && (world_rank + 1 < world_size))
       {
@@ -79,8 +78,7 @@ void WorkerSync::spin()
       old_size += recv_count;
 
       MPI_Barrier(MPI_COMM_WORLD);
-      /************************** [EVENS] <==> [ODDS]
-       * ****************************/
+      /************************** [EVENS] <==> [ODDS] *****************************/
       recv_count = 0;
       if (!(world_rank % 2) && (world_rank + 1 < world_size))
       {

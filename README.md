@@ -13,3 +13,16 @@ source set_env.sh
 mkdir build && cd build && cmake .. -DCUDA_ENABLED=On && make -j
 make test
 ```
+
+
+## Scope
+The following files (and associated headers) exclusively belong to the INF560 project:
++ `worker_sync.cpp`
++ `culayer.cu`
++ `culayer_kernel.cu`
++ `gpu_detect.cu`
++ `gpu_detect.cpp`
++ `test_curandom.cu`
++ `test_culayer.cu`
++ `test_gpu_errcheck`
++ `layer.cpp` (OpenMP and CUDA sections)
