@@ -202,10 +202,7 @@ target_link_libraries(mcmpi
 
 
 ########## Scripts ##########
-configure_file(scripts/save_run save_run COPYONLY)
 configure_file(scripts/run.batch run.batch COPYONLY)
-configure_file(scripts/run.py run.py COPYONLY)
-
 
 
 ########## Programs ##########
