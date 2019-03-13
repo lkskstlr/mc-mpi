@@ -1,6 +1,7 @@
 branches:
   only:
   - master
+  - inf560
 
 language: cpp
 dist: xenial
