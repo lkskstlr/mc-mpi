@@ -6,7 +6,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 
-slurm_job_id = 38455
+# Fill in job id!
+slurm_job_id = 44376
 folderpath = "out/{}/".format(slurm_job_id)
 
 def decompose_domain2(world_size, h, m, c):
@@ -134,81 +135,3 @@ for proc in range(0, world_size):
         ax.get_xaxis().set_visible(False)
         
 plt.show()
-
-print(total_work)
-
-c1 = np.zeros((world_size,), dtype=np.float)
-c2 = np.zeros((world_size,), dtype=np.float)
-
-for proc in range(0, world_size):
-    x_min = 1.0/world_size*proc
-    x_max = 1.0/world_size*(proc+1)
-    dx = x_max-x_min
-    
-    if x_max < 1/np.sqrt(2):
-        c1[proc] = dx
-        c2[proc] = -dx/np.sqrt(2) + (x_max**2-x_min**2)/2
-    elif x_min > 1/np.sqrt(2):
-        c1[proc] = dx
-        c2[proc] = +dx/np.sqrt(2) - (x_max**2-x_min**2)/2
-    else:
-        special = proc
-
-_c1 = np.delete(c1, special)
-_c2 = np.delete(c2, special)
-
-A = np.hstack((_c1[:, None], _c2[:, None]))
-b = np.delete(total_work, special)
-sol = np.linalg.lstsq(A, b)[0]
-
-xx = np.linspace(0, 1, 1000)
-yy = b[0] - b[1]*(1/np.sqrt(2)-xx)
-yy[xx>1/np.sqrt(2)] = b[0] - b[1]*(xx[xx>1/np.sqrt(2)] - 1/np.sqrt(2))
-
-
-expectedwork = np.zeros((world_size,), dtype=np.float)
-
-for proc in range(0, world_size):
-    x_min = 1.0/world_size*proc
-    x_max = 1.0/world_size*(proc+1)
-    dx = x_max-x_min
-    z = 1.0/np.sqrt(2)
-    
-    if x_max < 1/np.sqrt(2):
-        expectedwork[proc] = dx*sol[0] + sol[1]*(-dx/np.sqrt(2) + (x_max**2-x_min**2)/2)
-    elif x_min > 1/np.sqrt(2):
-        expectedwork[proc] = dx*sol[0] + sol[1]*(+dx/np.sqrt(2) - (x_max**2-x_min**2)/2)
-    else:
-        expectedwork[proc] = sol[0]*dx - sol[1]*0.5*((x_max-z)**2 + (z-x_min)**2)
-
-print(np.sum(total_work))
-print(np.sum(expectedwork))
-        
-const = total_work[special] - expectedwork[special]
-expectedwork[special] = total_work[special]
-
-print("h = {}, m = {}, c = {}".format(sol[0], sol[1], const))
-xs = decompose_domain(world_size, sol[0], sol[1], const)
-
-plt.figure()
-plt.plot((np.arange(world_size)+0.5)/world_size, total_work, '+-')
-plt.plot((np.arange(world_size)+0.5)/world_size, expectedwork, 'r')
-plt.plot(xs, 3*np.ones_like(xs), 'go')
-plt.plot(1/np.sqrt(2), 3, 'ro')
-plt.ylim([0, plt.ylim()[1]])
-plt.show()
-
-print(np.sum(total_work))
-print(np.sum(expectedwork))
-print(sol[0]-0.5*sol[1]*(1/2 + (1-1/np.sqrt(2))**2)+const)
-
-if True:
-    x = df_w['x']
-    w = df_w['weight']
-    w /= np.amax(w)
-    
-    plt.figure()
-    plt.plot(x, w)
-    plt.xlabel('x')
-    plt.ylabel('Visit count')
-    plt.show()
