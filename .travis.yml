@@ -1,6 +1,7 @@
 branches:
   only:
   - master
+  - inf518
 
 language: cpp
 dist: xenial
