@@ -118,37 +118,6 @@ void Worker::write_file(char *filename)
     displs[i] = displs[i - 1] + recvcounts[i - 1];
   }
 
-  // Write to collective file
-  // Does not seem to work, maybe the filesystem does not support it
-  // MPI_File file;
-  // int ret_open = MPI_File_open(MPI_COMM_WORLD, filename, MPI_MODE_WRONLY | MPI_MODE_CREATE,
-  //                              MPI_INFO_NULL, &file);
-
-  // MPI_File_set_size(file, 0);
-  // MPI_Offset mpi_offset = displs[world_rank];
-
-  // MPI_Status status;
-  // int ret_write = MPI_File_write_at_all(file, mpi_offset, buf, offset, MPI_CHAR,
-  //                                       &status);
-
-  // int count;
-  // MPI_Get_count(&status, MPI_CHAR, &count);
-
-  // if (count != (int)offset)
-  // {
-  //   fprintf(stderr, "Abort in Worker::write_file. Number of char written not correct.");
-  //   MPI_Abort(MPI_COMM_WORLD, 1);
-  // }
-
-  // MPI_Barrier(MPI_COMM_WORLD);
-  // usleep(10000 * world_rank);
-
-  // printf("r = %d, displ = %d, offset = %d, ret_open = %d, ret_write = %d, bytes_written = %d, strlen = %zu\n",
-  //        world_rank, displs[world_rank], offset, ret_open, ret_write, count, strlen(buf));
-  // // printf("%s\n", buf);
-  // MPI_File_close(&file);
-  // MPI_Barrier(MPI_COMM_WORLD);
-
   char *totalstring = NULL;
   if (world_rank == 0)
   {
@@ -162,9 +131,6 @@ void Worker::write_file(char *filename)
 
   if (world_rank == 0)
   {
-    // printf("%c\n", totalstring[totlen - 1]);
-    // printf("%s\n\n", totalstring);
-    // printf("%d ; %zu\n", totlen, strlen(totalstring));
 
     FILE *file = fopen(filename, "w");
 
