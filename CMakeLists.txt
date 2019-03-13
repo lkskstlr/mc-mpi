@@ -170,12 +170,23 @@ target_link_libraries(comm
   PUBLIC types MPI::MPI_C
 )
 
-add_library(mcmpi STATIC
-  src/worker.cpp
-  src/worker_sync.cpp
-  src/worker_async.cpp
-  src/worker_rma.cpp
-)
+if(CUDA_ENABLED)
+  add_library(mcmpi STATIC
+    src/worker.cpp
+    src/worker_sync.cpp
+    src/worker_async.cpp
+    src/worker_rma.cpp
+    src/gpu_detect.cu
+  )
+else()
+  add_library(mcmpi STATIC
+    src/worker.cpp
+    src/worker_sync.cpp
+    src/worker_async.cpp
+    src/worker_rma.cpp
+    src/gpu_detect.cpp
+  )
+endif()
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
   if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 4.9)
     target_compile_features(mcmpi PUBLIC cxx_lambda_init_captures)

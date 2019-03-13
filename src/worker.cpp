@@ -14,16 +14,12 @@
 #include <time.h>
 #include <unistd.h>
 #include <math.h>
+#include "gpu_detect.hpp"
 
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 
 #define WORKER_MPI_DECOMPOSE_DOMAIN_PRINT 1
-
-int cuda_get_num_gpus()
-{
-  return 1;
-}
 
 void MCMPI_Schedule(int local_size, int local_rank, int *number_threads_rank, int *gpu_enabled)
 {
